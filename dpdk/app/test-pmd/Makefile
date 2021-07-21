@@ -70,6 +70,10 @@ ifeq ($(CONFIG_RTE_LIBRTE_PMD_SOFTNIC),y)
 LDLIBS += -lrte_pmd_softnic
 endif
 
+ifeq ($(CONFIG_RTE_LIBRTE_YUSUR2_PMD),y)
+LDLIBS += -lrte_pmd_yusur2
+endif
+
 endif
 
 include $(RTE_SDK)/mk/rte.app.mk
