@@ -4,8 +4,6 @@
 
 #include "yusur2_common.h"
 #include "yusur2_phy.h"
-#include "yusur2_dcb.h"
-#include "yusur2_dcb_82599.h"
 #include "yusur2_api.h"
 
 STATIC s32 yusur2_acquire_eeprom(struct yusur2_hw *hw);
@@ -132,6 +130,8 @@ s32 yusur2_init_ops_generic(struct yusur2_hw *hw)
 bool yusur2_device_supports_autoneg_fc(struct yusur2_hw *hw)
 {
 	bool supported = false;
+//TODO: support autonegotiation
+#if 0
 	yusur2_link_speed speed;
 	bool link_up;
 
@@ -190,6 +190,7 @@ bool yusur2_device_supports_autoneg_fc(struct yusur2_hw *hw)
 		ERROR_REPORT2(YUSUR2_ERROR_UNSUPPORTED,
 			      "Device %x does not support flow control autoneg",
 			      hw->device_id);
+#endif
 	return supported;
 }
 
@@ -202,6 +203,8 @@ bool yusur2_device_supports_autoneg_fc(struct yusur2_hw *hw)
 s32 yusur2_setup_fc_generic(struct yusur2_hw *hw)
 {
 	s32 ret_val = YUSUR2_SUCCESS;
+//TODO: check..
+#if 0
 	u32 reg = 0, reg_bp = 0;
 	u16 reg_cu = 0;
 	bool locked = false;
@@ -345,6 +348,7 @@ s32 yusur2_setup_fc_generic(struct yusur2_hw *hw)
 
 	DEBUGOUT1("Set up FC; PCS1GLCTL = 0x%08X\n", reg);
 out:
+#endif
 	return ret_val;
 }
 
@@ -360,8 +364,6 @@ out:
 s32 yusur2_start_hw_generic(struct yusur2_hw *hw)
 {
 	s32 ret_val;
-	u32 ctrl_ext;
-	u16 device_caps;
 
 	DEBUGFUNC("yusur2_start_hw_generic");
 
@@ -376,11 +378,14 @@ s32 yusur2_start_hw_generic(struct yusur2_hw *hw)
 	/* Clear statistics registers */
 	hw->mac.ops.clear_hw_cntrs(hw);
 
+//TODO: snoop support
+#if 0
 	/* Set No Snoop Disable */
 	ctrl_ext = YUSUR2_READ_REG(hw, YUSUR2_CTRL_EXT);
 	ctrl_ext |= YUSUR2_CTRL_EXT_NS_DIS;
 	YUSUR2_WRITE_REG(hw, YUSUR2_CTRL_EXT, ctrl_ext);
 	YUSUR2_WRITE_FLUSH(hw);
+#endif
 
 	/* Setup flow control */
 	ret_val = yusur2_setup_fc(hw);
@@ -388,22 +393,8 @@ s32 yusur2_start_hw_generic(struct yusur2_hw *hw)
 		DEBUGOUT1("Flow control setup failed, returning %d\n", ret_val);
 		return ret_val;
 	}
-
 	/* Cache bit indicating need for crosstalk fix */
-	switch (hw->mac.type) {
-	case yusur2_mac_82599EB:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		hw->mac.ops.get_device_caps(hw, &device_caps);
-		if (device_caps & YUSUR2_DEVICE_CAPS_NO_CROSSTALK_WR)
-			hw->need_crosstalk_fix = false;
-		else
-			hw->need_crosstalk_fix = true;
-		break;
-	default:
-		hw->need_crosstalk_fix = false;
-		break;
-	}
+	hw->need_crosstalk_fix = false;
 
 	/* Clear adapter stopped flag */
 	hw->adapter_stopped = false;
@@ -493,6 +484,8 @@ s32 yusur2_init_hw_generic(struct yusur2_hw *hw)
  **/
 s32 yusur2_clear_hw_cntrs_generic(struct yusur2_hw *hw)
 {
+//TODO: support hardware counters...
+#if 0
 	u16 i = 0;
 
 	DEBUGFUNC("yusur2_clear_hw_cntrs_generic");
@@ -594,7 +587,7 @@ s32 yusur2_clear_hw_cntrs_generic(struct yusur2_hw *hw)
 		hw->phy.ops.read_reg(hw, YUSUR2_LDPCECH,
 				     YUSUR2_MDIO_PCS_DEV_TYPE, &i);
 	}
-
+#endif
 	return YUSUR2_SUCCESS;
 }
 
@@ -1042,6 +1035,8 @@ s32 yusur2_get_bus_info_generic(struct yusur2_hw *hw)
  **/
 void yusur2_set_lan_id_multi_port_pcie(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	struct yusur2_bus_info *bus = &hw->bus;
 	u32 reg;
 	u16 ee_ctrl_4;
@@ -1063,6 +1058,7 @@ void yusur2_set_lan_id_multi_port_pcie(struct yusur2_hw *hw)
 		bus->instance_id = (ee_ctrl_4 & YUSUR2_EE_CTRL_4_INST_ID) >>
 				   YUSUR2_EE_CTRL_4_INST_ID_SHIFT;
 	}
+#endif
 }
 
 /**
@@ -1128,6 +1124,8 @@ s32 yusur2_stop_adapter_generic(struct yusur2_hw *hw)
  **/
 s32 yusur2_init_led_link_act_generic(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	struct yusur2_mac_info *mac = &hw->mac;
 	u32 led_reg, led_mode;
 	u8 i;
@@ -1157,6 +1155,7 @@ s32 yusur2_init_led_link_act_generic(struct yusur2_hw *hw)
 	default:
 		mac->led_link_act = 2;
 	}
+#endif
 	return YUSUR2_SUCCESS;
 }
 
@@ -3000,8 +2999,10 @@ out:
  **/
 STATIC s32 yusur2_fc_autoneg_backplane(struct yusur2_hw *hw)
 {
-	u32 links2, anlp1_reg, autoc_reg, links;
 	s32 ret_val = YUSUR2_ERR_FC_NOT_NEGOTIATED;
+//TODO:
+#if 0
+	u32 links2, anlp1_reg, autoc_reg, links;
 
 	/*
 	 * On backplane, bail out if
@@ -3033,6 +3034,7 @@ STATIC s32 yusur2_fc_autoneg_backplane(struct yusur2_hw *hw)
 		YUSUR2_ANLP1_SYM_PAUSE, YUSUR2_ANLP1_ASM_PAUSE);
 
 out:
+#endif
 	return ret_val;
 }
 
@@ -3184,10 +3186,12 @@ STATIC u32 yusur2_pcie_timeout_poll(struct yusur2_hw *hw)
 s32 yusur2_disable_pcie_master(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
-	u32 i, poll;
-	u16 value;
 
 	DEBUGFUNC("yusur2_disable_pcie_master");
+//TODO: need to check
+#if 0
+	u32 i, poll;
+	u16 value;
 
 	/* Always set this bit to ensure any future transactions are blocked */
 	YUSUR2_WRITE_REG(hw, YUSUR2_CTRL, YUSUR2_CTRL_GIO_DIS);
@@ -3237,6 +3241,7 @@ s32 yusur2_disable_pcie_master(struct yusur2_hw *hw)
 	status = YUSUR2_ERR_MASTER_REQUESTS_PENDING;
 
 out:
+#endif
 	return status;
 }
 
@@ -3641,11 +3646,13 @@ s32 yusur2_set_san_mac_addr_generic(struct yusur2_hw *hw, u8 *san_mac_addr)
 u16 yusur2_get_pcie_msix_count_generic(struct yusur2_hw *hw)
 {
 	u16 msix_count = 1;
+//TODO:
+#if 0
 	u16 max_msix_count;
 	u16 pcie_offset;
 
 	switch (hw->mac.type) {
-	case yusur2_mac_82598EB:
+	case yusur2_mac_SN2100:
 		pcie_offset = YUSUR2_PCIE_MSIX_82598_CAPS;
 		max_msix_count = YUSUR2_MAX_MSIX_VECTORS_82598;
 		break;
@@ -3672,7 +3679,7 @@ u16 yusur2_get_pcie_msix_count_generic(struct yusur2_hw *hw)
 
 	if (msix_count > max_msix_count)
 		msix_count = max_msix_count;
-
+#endif
 	return msix_count;
 }
 
@@ -4110,6 +4117,7 @@ s32 yusur2_clear_vfta_generic(struct yusur2_hw *hw)
  *  Contains the logic to identify if we need to verify link for the
  *  crosstalk fix
  **/
+#if 0
 static bool yusur2_need_crosstalk_fix(struct yusur2_hw *hw)
 {
 
@@ -4128,6 +4136,7 @@ static bool yusur2_need_crosstalk_fix(struct yusur2_hw *hw)
 
 	return true;
 }
+#endif
 
 /**
  *  yusur2_check_mac_link_generic - Determine link and speed status
@@ -4141,6 +4150,8 @@ static bool yusur2_need_crosstalk_fix(struct yusur2_hw *hw)
 s32 yusur2_check_mac_link_generic(struct yusur2_hw *hw, yusur2_link_speed *speed,
 				 bool *link_up, bool link_up_wait_to_complete)
 {
+//TODO:
+#if 0
 	u32 links_reg, links_orig;
 	u32 i;
 
@@ -4238,7 +4249,7 @@ s32 yusur2_check_mac_link_generic(struct yusur2_hw *hw, yusur2_link_speed *speed
 	default:
 		*speed = YUSUR2_LINK_SPEED_UNKNOWN;
 	}
-
+#endif
 	return YUSUR2_SUCCESS;
 }
 
@@ -4358,6 +4369,8 @@ out:
  **/
 void yusur2_set_mac_anti_spoofing(struct yusur2_hw *hw, bool enable, int vf)
 {
+//TODO:
+#if 0
 	int vf_target_reg = vf >> 3;
 	int vf_target_shift = vf % 8;
 	u32 pfvfspoof;
@@ -4371,6 +4384,7 @@ void yusur2_set_mac_anti_spoofing(struct yusur2_hw *hw, bool enable, int vf)
 	else
 		pfvfspoof &= ~(1 << vf_target_shift);
 	YUSUR2_WRITE_REG(hw, YUSUR2_PFVFSPOOF(vf_target_reg), pfvfspoof);
+#endif
 }
 
 /**
@@ -4382,6 +4396,8 @@ void yusur2_set_mac_anti_spoofing(struct yusur2_hw *hw, bool enable, int vf)
  **/
 void yusur2_set_vlan_anti_spoofing(struct yusur2_hw *hw, bool enable, int vf)
 {
+//TODO:
+#if 0
 	int vf_target_reg = vf >> 3;
 	int vf_target_shift = vf % 8 + YUSUR2_SPOOF_VLANAS_SHIFT;
 	u32 pfvfspoof;
@@ -4395,6 +4411,7 @@ void yusur2_set_vlan_anti_spoofing(struct yusur2_hw *hw, bool enable, int vf)
 	else
 		pfvfspoof &= ~(1 << vf_target_shift);
 	YUSUR2_WRITE_REG(hw, YUSUR2_PFVFSPOOF(vf_target_reg), pfvfspoof);
+#endif
 }
 
 /**
@@ -4817,6 +4834,7 @@ out:
 	YUSUR2_WRITE_REG(hw, YUSUR2_HLREG0, hlreg0);
 }
 
+#if 0
 STATIC const u8 yusur2_emc_temp_data[4] = {
 	YUSUR2_EMC_INTERNAL_DATA,
 	YUSUR2_EMC_DIODE1_DATA,
@@ -4829,6 +4847,7 @@ STATIC const u8 yusur2_emc_therm_limit[4] = {
 	YUSUR2_EMC_DIODE2_THERM_LIMIT,
 	YUSUR2_EMC_DIODE3_THERM_LIMIT
 };
+#endif
 
 /**
  *  yusur2_get_thermal_sensor_data - Gathers thermal sensor data
@@ -4839,6 +4858,8 @@ STATIC const u8 yusur2_emc_therm_limit[4] = {
 s32 yusur2_get_thermal_sensor_data_generic(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	u16 ets_offset;
 	u16 ets_cfg;
 	u16 ets_sensor;
@@ -4901,6 +4922,7 @@ s32 yusur2_get_thermal_sensor_data_generic(struct yusur2_hw *hw)
 		}
 	}
 out:
+#endif
 	return status;
 }
 
@@ -4914,6 +4936,8 @@ out:
 s32 yusur2_init_thermal_sensor_thresh_generic(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	u16 offset;
 	u16 ets_offset;
 	u16 ets_cfg;
@@ -4977,12 +5001,14 @@ s32 yusur2_init_thermal_sensor_thresh_generic(struct yusur2_hw *hw)
 							low_thresh_delta;
 		}
 	}
+#endif
 	return status;
-
+#if 0
 eeprom_err:
 	ERROR_REPORT2(YUSUR2_ERROR_INVALID_STATE,
 		      "eeprom read at offset %d failed", offset);
 	return YUSUR2_NOT_IMPLEMENTED;
+#endif
 }
 
 /**
@@ -5106,6 +5132,8 @@ void yusur2_get_etk_id(struct yusur2_hw *hw, struct yusur2_nvm_version *nvm_ver)
  **/
 void yusur2_dcb_get_rtrup2tc_generic(struct yusur2_hw *hw, u8 *map)
 {
+//TODO:
+#if 0
 	u32 reg, i;
 
 	reg = YUSUR2_READ_REG(hw, YUSUR2_RTRUP2TC);
@@ -5113,10 +5141,13 @@ void yusur2_dcb_get_rtrup2tc_generic(struct yusur2_hw *hw, u8 *map)
 		map[i] = YUSUR2_RTRUP2TC_UP_MASK &
 			(reg >> (i * YUSUR2_RTRUP2TC_UP_SHIFT));
 	return;
+#endif
 }
 
 void yusur2_disable_rx_generic(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	u32 pfdtxgswc;
 	u32 rxctrl;
 
@@ -5135,10 +5166,13 @@ void yusur2_disable_rx_generic(struct yusur2_hw *hw)
 		rxctrl &= ~YUSUR2_RXCTRL_RXEN;
 		YUSUR2_WRITE_REG(hw, YUSUR2_RXCTRL, rxctrl);
 	}
+#endif
 }
 
 void yusur2_enable_rx_generic(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	u32 pfdtxgswc;
 	u32 rxctrl;
 
@@ -5153,6 +5187,7 @@ void yusur2_enable_rx_generic(struct yusur2_hw *hw)
 			hw->mac.set_lben = false;
 		}
 	}
+#endif
 }
 
 /**
@@ -5161,6 +5196,8 @@ void yusur2_enable_rx_generic(struct yusur2_hw *hw)
  */
 bool yusur2_mng_present(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	u32 fwsm;
 
 	if (hw->mac.type < yusur2_mac_82599EB)
@@ -5169,6 +5206,8 @@ bool yusur2_mng_present(struct yusur2_hw *hw)
 	fwsm = YUSUR2_READ_REG(hw, YUSUR2_FWSM_BY_MAC(hw));
 
 	return !!(fwsm & YUSUR2_FWSM_FW_MODE_PT);
+#endif
+	return false;
 }
 
 /**
@@ -5179,6 +5218,8 @@ bool yusur2_mng_present(struct yusur2_hw *hw)
  **/
 bool yusur2_mng_enabled(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	u32 fwsm, manc, factps;
 
 	fwsm = YUSUR2_READ_REG(hw, YUSUR2_FWSM_BY_MAC(hw));
@@ -5194,7 +5235,7 @@ bool yusur2_mng_enabled(struct yusur2_hw *hw)
 		if (factps & YUSUR2_FACTPS_MNGCG)
 			return false;
 	}
-
+#endif
 	return true;
 }
 

@@ -64,30 +64,8 @@ s32 yusur2_init_shared_code(struct yusur2_hw *hw)
 	yusur2_set_mac_type(hw);
 
 	switch (hw->mac.type) {
-	case yusur2_mac_82598EB:
-		status = yusur2_init_ops_82598(hw);
-		break;
-	case yusur2_mac_82599EB:
-		status = yusur2_init_ops_82599(hw);
-		break;
-	case yusur2_mac_X540:
-		status = yusur2_init_ops_X540(hw);
-		break;
-	case yusur2_mac_X550:
-		status = yusur2_init_ops_X550(hw);
-		break;
-	case yusur2_mac_X550EM_x:
-		status = yusur2_init_ops_X550EM_x(hw);
-		break;
-	case yusur2_mac_X550EM_a:
-		status = yusur2_init_ops_X550EM_a(hw);
-		break;
-	case yusur2_mac_82599_vf:
-	case yusur2_mac_X540_vf:
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		status = yusur2_init_ops_vf(hw);
+	case yusur2_mac_sn2100:
+		status = yusur2_init_ops_sn2100(hw);
 		break;
 	default:
 		status = YUSUR2_ERR_DEVICE_NOT_SUPPORTED;
@@ -111,7 +89,7 @@ s32 yusur2_set_mac_type(struct yusur2_hw *hw)
 
 	DEBUGFUNC("yusur2_set_mac_type\n");
 
-	if (hw->vendor_id != YUSUR2_INTEL_VENDOR_ID) {
+	if (hw->vendor_id != YUSUR2_YUSUR_VENDOR_ID) {
 		ERROR_REPORT2(YUSUR2_ERROR_UNSUPPORTED,
 			     "Unsupported vendor id: %x", hw->vendor_id);
 		return YUSUR2_ERR_DEVICE_NOT_SUPPORTED;
@@ -120,94 +98,10 @@ s32 yusur2_set_mac_type(struct yusur2_hw *hw)
 	hw->mvals = yusur2_mvals_base;
 
 	switch (hw->device_id) {
-	case YUSUR2_DEV_ID_82598:
-	case YUSUR2_DEV_ID_82598_BX:
-	case YUSUR2_DEV_ID_82598AF_SINGLE_PORT:
-	case YUSUR2_DEV_ID_82598AF_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598AT:
-	case YUSUR2_DEV_ID_82598AT2:
-	case YUSUR2_DEV_ID_82598EB_CX4:
-	case YUSUR2_DEV_ID_82598_CX4_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598_DA_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598_SR_DUAL_PORT_EM:
-	case YUSUR2_DEV_ID_82598EB_XF_LR:
-	case YUSUR2_DEV_ID_82598EB_SFP_LOM:
-		hw->mac.type = yusur2_mac_82598EB;
+	case YUSUR2_DEV_ID_SN2100:
+		hw->mac.type = yusur2_mac_sn2100;
 		break;
-	case YUSUR2_DEV_ID_82599_KX4:
-	case YUSUR2_DEV_ID_82599_KX4_MEZZ:
-	case YUSUR2_DEV_ID_82599_XAUI_LOM:
-	case YUSUR2_DEV_ID_82599_COMBO_BACKPLANE:
-	case YUSUR2_DEV_ID_82599_KR:
-	case YUSUR2_DEV_ID_82599_SFP:
-	case YUSUR2_DEV_ID_82599_BACKPLANE_FCOE:
-	case YUSUR2_DEV_ID_82599_SFP_FCOE:
-	case YUSUR2_DEV_ID_82599_SFP_EM:
-	case YUSUR2_DEV_ID_82599_SFP_SF2:
-	case YUSUR2_DEV_ID_82599_SFP_SF_QP:
-	case YUSUR2_DEV_ID_82599_QSFP_SF_QP:
-	case YUSUR2_DEV_ID_82599EN_SFP:
-	case YUSUR2_DEV_ID_82599_CX4:
-	case YUSUR2_DEV_ID_82599_T3_LOM:
-		hw->mac.type = yusur2_mac_82599EB;
-		break;
-	case YUSUR2_DEV_ID_82599_VF:
-	case YUSUR2_DEV_ID_82599_VF_HV:
-		hw->mac.type = yusur2_mac_82599_vf;
-		break;
-	case YUSUR2_DEV_ID_X540_VF:
-	case YUSUR2_DEV_ID_X540_VF_HV:
-		hw->mac.type = yusur2_mac_X540_vf;
-		hw->mvals = yusur2_mvals_X540;
-		break;
-	case YUSUR2_DEV_ID_X540T:
-	case YUSUR2_DEV_ID_X540T1:
-		hw->mac.type = yusur2_mac_X540;
-		hw->mvals = yusur2_mvals_X540;
-		break;
-	case YUSUR2_DEV_ID_X550T:
-	case YUSUR2_DEV_ID_X550T1:
-		hw->mac.type = yusur2_mac_X550;
-		hw->mvals = yusur2_mvals_X550;
-		break;
-	case YUSUR2_DEV_ID_X550EM_X_KX4:
-	case YUSUR2_DEV_ID_X550EM_X_KR:
-	case YUSUR2_DEV_ID_X550EM_X_10G_T:
-	case YUSUR2_DEV_ID_X550EM_X_1G_T:
-	case YUSUR2_DEV_ID_X550EM_X_SFP:
-	case YUSUR2_DEV_ID_X550EM_X_XFI:
-		hw->mac.type = yusur2_mac_X550EM_x;
-		hw->mvals = yusur2_mvals_X550EM_x;
-		break;
-	case YUSUR2_DEV_ID_X550EM_A_KR:
-	case YUSUR2_DEV_ID_X550EM_A_KR_L:
-	case YUSUR2_DEV_ID_X550EM_A_SFP_N:
-	case YUSUR2_DEV_ID_X550EM_A_SGMII:
-	case YUSUR2_DEV_ID_X550EM_A_SGMII_L:
-	case YUSUR2_DEV_ID_X550EM_A_1G_T:
-	case YUSUR2_DEV_ID_X550EM_A_1G_T_L:
-	case YUSUR2_DEV_ID_X550EM_A_10G_T:
-	case YUSUR2_DEV_ID_X550EM_A_QSFP:
-	case YUSUR2_DEV_ID_X550EM_A_QSFP_N:
-	case YUSUR2_DEV_ID_X550EM_A_SFP:
-		hw->mac.type = yusur2_mac_X550EM_a;
-		hw->mvals = yusur2_mvals_X550EM_a;
-		break;
-	case YUSUR2_DEV_ID_X550_VF:
-	case YUSUR2_DEV_ID_X550_VF_HV:
-		hw->mac.type = yusur2_mac_X550_vf;
-		hw->mvals = yusur2_mvals_X550;
-		break;
-	case YUSUR2_DEV_ID_X550EM_X_VF:
-	case YUSUR2_DEV_ID_X550EM_X_VF_HV:
-		hw->mac.type = yusur2_mac_X550EM_x_vf;
-		hw->mvals = yusur2_mvals_X550EM_x;
-		break;
-	case YUSUR2_DEV_ID_X550EM_A_VF:
-	case YUSUR2_DEV_ID_X550EM_A_VF_HV:
-		hw->mac.type = yusur2_mac_X550EM_a_vf;
-		hw->mvals = yusur2_mvals_X550EM_a;
-		break;
+
 	default:
 		ret_val = YUSUR2_ERR_DEVICE_NOT_SUPPORTED;
 		ERROR_REPORT2(YUSUR2_ERROR_UNSUPPORTED,
@@ -647,6 +541,7 @@ s32 yusur2_check_link(struct yusur2_hw *hw, yusur2_link_speed *speed,
  **/
 void yusur2_disable_tx_laser(struct yusur2_hw *hw)
 {
+//TODO: need to check...
 	if (hw->mac.ops.disable_tx_laser)
 		hw->mac.ops.disable_tx_laser(hw);
 }
@@ -659,6 +554,7 @@ void yusur2_disable_tx_laser(struct yusur2_hw *hw)
  **/
 void yusur2_enable_tx_laser(struct yusur2_hw *hw)
 {
+//TODO: need to check...
 	if (hw->mac.ops.enable_tx_laser)
 		hw->mac.ops.enable_tx_laser(hw);
 }

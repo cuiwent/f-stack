@@ -26,17 +26,6 @@ static const struct reg_info yusur2_regs_general[] = {
 	{0, 0, 0, ""}
 };
 
-static const struct reg_info yusur2vf_regs_general[] = {
-	{YUSUR2_VFCTRL, 1, 1, "YUSUR2_VFCTRL"},
-	{YUSUR2_VFSTATUS, 1, 1, "YUSUR2_VFSTATUS"},
-	{YUSUR2_VFLINKS, 1, 1, "YUSUR2_VFLINKS"},
-	{YUSUR2_VFFRTIMER, 1, 1, "YUSUR2_VFFRTIMER"},
-	{YUSUR2_VFMAILBOX, 1, 1, "YUSUR2_VFMAILBOX"},
-	{YUSUR2_VFMBMEM, 16, 4, "YUSUR2_VFMBMEM"},
-	{YUSUR2_VFRXMEMWRAP, 1, 1, "YUSUR2_VFRXMEMWRAP"},
-	{0, 0, 0, ""}
-};
-
 static const struct reg_info yusur2_regs_nvm[] = {
 	{YUSUR2_EEC, 1, 1, "YUSUR2_EEC"},
 	{YUSUR2_EERD, 1, 1, "YUSUR2_EERD"},
@@ -63,19 +52,6 @@ static const struct reg_info yusur2_regs_interrupt[] = {
 	{YUSUR2_MSIXPBA, 1, 1, "YUSUR2_MSIXPBA"},
 	{YUSUR2_PBACL(0),  1, 4, "YUSUR2_PBACL"},
 	{YUSUR2_GPIE, 1, 1, ""},
-	{0, 0, 0, ""}
-};
-
-static const struct reg_info yusur2vf_regs_interrupt[] = {
-	{YUSUR2_VTEICR, 1, 1, "YUSUR2_VTEICR"},
-	{YUSUR2_VTEICS, 1, 1, "YUSUR2_VTEICS"},
-	{YUSUR2_VTEIMS, 1, 1, "YUSUR2_VTEIMS"},
-	{YUSUR2_VTEIMC, 1, 1, "YUSUR2_VTEIMC"},
-	{YUSUR2_VTEIAM, 1, 1, "YUSUR2_VTEIAM"},
-	{YUSUR2_VTEITR(0), 2, 4, "YUSUR2_VTEITR"},
-	{YUSUR2_VTIVAR(0), 4, 4, "YUSUR2_VTIVAR"},
-	{YUSUR2_VTIVAR_MISC, 1, 1, "YUSUR2_VTIVAR_MISC"},
-	{YUSUR2_VTRSCINT(0), 2, 4, "YUSUR2_VTRSCINT"},
 	{0, 0, 0, ""}
 };
 
@@ -115,21 +91,6 @@ static const struct reg_info yusur2_regs_rxdma[] = {
 	{0, 0, 0, ""}
 };
 
-static const struct reg_info yusur2vf_regs_rxdma[] = {
-	{YUSUR2_VFRDBAL(0), 8, 0x40, "YUSUR2_VFRDBAL"},
-	{YUSUR2_VFRDBAH(0), 8, 0x40, "YUSUR2_VFRDBAH"},
-	{YUSUR2_VFRDLEN(0), 8, 0x40, "YUSUR2_VFRDLEN"},
-	{YUSUR2_VFRDH(0), 8, 0x40, "YUSUR2_VFRDH"},
-	{YUSUR2_VFRDT(0), 8, 0x40, "YUSUR2_VFRDT"},
-	{YUSUR2_VFRXDCTL(0), 8, 0x40, "YUSUR2_VFRXDCTL"},
-	{YUSUR2_VFSRRCTL(0), 8, 0x40, "YUSUR2_VFSRRCTL"},
-	{YUSUR2_VFPSRTYPE, 1, 1,	"YUSUR2_VFPSRTYPE"},
-	{YUSUR2_VFRSCCTL(0), 8, 0x40, "YUSUR2_VFRSCCTL"},
-	{YUSUR2_VFDCA_RXCTRL(0), 8, 0x40, "YUSUR2_VFDCA_RXCTRL"},
-	{YUSUR2_VFDCA_TXCTRL(0), 8, 0x40, "YUSUR2_VFDCA_TXCTRL"},
-	{0, 0, 0, ""}
-};
-
 static const struct reg_info yusur2_regs_rx[] = {
 	{YUSUR2_RXCSUM, 1, 1, "YUSUR2_RXCSUM"},
 	{YUSUR2_RFCTL, 1, 1, "YUSUR2_RFCTL"},
@@ -160,18 +121,6 @@ static struct reg_info yusur2_regs_tx[] = {
 	{YUSUR2_DCA_TXCTRL(0), 16, 4, "YUSUR2_DCA_TXCTRL"},
 	{YUSUR2_TXPBSIZE(0), 8, 4, "YUSUR2_TXPBSIZE"},
 	{YUSUR2_MNGTXMAP, 1, 1, "YUSUR2_MNGTXMAP"},
-	{0, 0, 0, ""}
-};
-
-static const struct reg_info yusur2vf_regs_tx[] = {
-	{YUSUR2_VFTDBAL(0), 4, 0x40, "YUSUR2_VFTDBAL"},
-	{YUSUR2_VFTDBAH(0), 4, 0x40, "YUSUR2_VFTDBAH"},
-	{YUSUR2_VFTDLEN(0), 4, 0x40, "YUSUR2_VFTDLEN"},
-	{YUSUR2_VFTDH(0), 4, 0x40, "YUSUR2_VFTDH"},
-	{YUSUR2_VFTDT(0), 4, 0x40, "YUSUR2_VFTDT"},
-	{YUSUR2_VFTXDCTL(0), 4, 0x40, "YUSUR2_VFTXDCTL"},
-	{YUSUR2_VFTDWBAL(0), 4, 0x40, "YUSUR2_VFTDWBAL"},
-	{YUSUR2_VFTDWBAH(0), 4, 0x40, "YUSUR2_VFTDWBAH"},
 	{0, 0, 0, ""}
 };
 
@@ -284,28 +233,6 @@ static const struct reg_info *yusur2_regs_others[] = {
 				yusur2_regs_dcb,
 				yusur2_regs_mac,
 				yusur2_regs_diagnostic,
-				NULL};
-
-static const struct reg_info *yusur2_regs_mac_82598EB[] = {
-				yusur2_regs_general,
-				yusur2_regs_nvm,
-				yusur2_regs_interrupt,
-				yusur2_regs_fctl_mac_82598EB,
-				yusur2_regs_rxdma,
-				yusur2_regs_rx,
-				yusur2_regs_tx,
-				yusur2_regs_wakeup,
-				yusur2_regs_dcb,
-				yusur2_regs_mac,
-				yusur2_regs_diagnostic,
-				NULL};
-
-/* VF registers */
-static const struct reg_info *yusur2vf_regs[] = {
-				yusur2vf_regs_general,
-				yusur2vf_regs_interrupt,
-				yusur2vf_regs_rxdma,
-				yusur2vf_regs_tx,
 				NULL};
 
 static inline int

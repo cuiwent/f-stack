@@ -9,16 +9,11 @@ subdir('base')
 objs = [base_objs]
 
 sources = files(
-	'yusur2_82599_bypass.c',
 	'yusur2_bypass.c',
 	'yusur2_ethdev.c',
-	'yusur2_fdir.c',
-	'yusur2_flow.c',
-	'yusur2_ipsec.c',
 	'yusur2_pf.c',
 	'yusur2_rxtx.c',
 	'yusur2_tm.c',
-	'yusur2_vf_representor.c',
 	'rte_pmd_yusur2.c'
 )
 

@@ -348,6 +348,8 @@ s32 yusur2_identify_phy_generic(struct yusur2_hw *hw)
  **/
 s32 yusur2_check_reset_blocked(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	u32 mmngc;
 
 	DEBUGFUNC("yusur2_check_reset_blocked");
@@ -362,7 +364,7 @@ s32 yusur2_check_reset_blocked(struct yusur2_hw *hw)
 			      "MNG_VETO bit detected.\n");
 		return true;
 	}
-
+#endif
 	return false;
 }
 
@@ -760,6 +762,8 @@ s32 yusur2_write_phy_reg_generic(struct yusur2_hw *hw, u32 reg_addr,
 s32 yusur2_setup_phy_link_generic(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	u16 autoneg_reg = YUSUR2_MII_AUTONEG_REG;
 	bool autoneg = false;
 	yusur2_link_speed speed;
@@ -838,7 +842,7 @@ s32 yusur2_setup_phy_link_generic(struct yusur2_hw *hw)
 
 	hw->phy.ops.write_reg(hw, YUSUR2_MDIO_AUTO_NEG_CONTROL,
 			      YUSUR2_MDIO_AUTO_NEG_DEV_TYPE, autoneg_reg);
-
+#endif
 	return status;
 }
 
@@ -895,7 +899,9 @@ s32 yusur2_setup_phy_link_speed_generic(struct yusur2_hw *hw,
  **/
 static s32 yusur2_get_copper_speeds_supported(struct yusur2_hw *hw)
 {
-	s32 status;
+	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	u16 speed_ability;
 
 	status = hw->phy.ops.read_reg(hw, YUSUR2_MDIO_PHY_SPEED_ABILITY,
@@ -923,7 +929,7 @@ static s32 yusur2_get_copper_speeds_supported(struct yusur2_hw *hw)
 	default:
 		break;
 	}
-
+#endif
 	return status;
 }
 
@@ -1122,6 +1128,9 @@ s32 yusur2_get_phy_firmware_version_generic(struct yusur2_hw *hw,
  **/
 s32 yusur2_reset_phy_nl(struct yusur2_hw *hw)
 {
+//TODO:
+	s32 ret_val = YUSUR2_SUCCESS;
+#if 0
 	u16 phy_offset, control, eword, edata, block_crc;
 	bool end_data = false;
 	u16 list_offset, data_offset;
@@ -1230,6 +1239,8 @@ err_eeprom:
 	ERROR_REPORT2(YUSUR2_ERROR_INVALID_STATE,
 		      "eeprom read at offset %d failed", data_offset);
 	return YUSUR2_ERR_PHY;
+#endif
+	return ret_val;
 }
 
 /**
@@ -1270,6 +1281,9 @@ s32 yusur2_identify_module_generic(struct yusur2_hw *hw)
  **/
 s32 yusur2_identify_sfp_module_generic(struct yusur2_hw *hw)
 {
+	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	s32 status = YUSUR2_ERR_PHY_ADDR_INVALID;
 	u32 vendor_oui = 0;
 	enum yusur2_sfp_type stored_sfp_type = hw->phy.sfp_type;
@@ -1555,6 +1569,8 @@ err_read_i2c_eeprom:
 		hw->phy.type = yusur2_phy_unknown;
 	}
 	return YUSUR2_ERR_SFP_NOT_PRESENT;
+#endif
+	return status;
 }
 
 /**
@@ -1825,6 +1841,8 @@ s32 yusur2_get_sfp_init_sequence_offsets(struct yusur2_hw *hw,
 					u16 *list_offset,
 					u16 *data_offset)
 {
+//TODO:
+#if 0
 	u16 sfp_id;
 	u16 sfp_type = hw->phy.sfp_type;
 
@@ -1907,6 +1925,8 @@ err_phy:
 	ERROR_REPORT2(YUSUR2_ERROR_INVALID_STATE,
 		      "eeprom read at offset %d failed", *list_offset);
 	return YUSUR2_ERR_PHY;
+#endif
+	return YUSUR2_SUCCESS;
 }
 
 /**
@@ -1967,6 +1987,8 @@ s32 yusur2_write_i2c_eeprom_generic(struct yusur2_hw *hw, u8 byte_offset,
  * @offset: eeprom offset to be read
  * @addr: I2C address to be read
  */
+//TODO:
+#if 0
 STATIC bool yusur2_is_sfp_probe(struct yusur2_hw *hw, u8 offset, u8 addr)
 {
 	if (addr == YUSUR2_I2C_EEPROM_DEV_ADDR &&
@@ -1975,6 +1997,7 @@ STATIC bool yusur2_is_sfp_probe(struct yusur2_hw *hw, u8 offset, u8 addr)
 		return true;
 	return false;
 }
+#endif
 
 /**
  *  yusur2_read_i2c_byte_generic_int - Reads 8 bit word over I2C
@@ -1990,6 +2013,9 @@ STATIC bool yusur2_is_sfp_probe(struct yusur2_hw *hw, u8 offset, u8 addr)
 STATIC s32 yusur2_read_i2c_byte_generic_int(struct yusur2_hw *hw, u8 byte_offset,
 					   u8 dev_addr, u8 *data, bool lock)
 {
+	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	s32 status;
 	u32 max_retry = 10;
 	u32 retry = 0;
@@ -2064,7 +2090,7 @@ fail:
 			DEBUGOUT("I2C byte read error.\n");
 
 	} while (retry < max_retry);
-
+#endif
 	return status;
 }
 
@@ -2642,6 +2668,8 @@ void yusur2_i2c_bus_clear(struct yusur2_hw *hw)
 s32 yusur2_tn_check_overtemp(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	u16 phy_data = 0;
 
 	DEBUGFUNC("yusur2_tn_check_overtemp");
@@ -2659,6 +2687,7 @@ s32 yusur2_tn_check_overtemp(struct yusur2_hw *hw)
 	status = YUSUR2_ERR_OVERTEMP;
 	ERROR_REPORT1(YUSUR2_ERROR_CAUTION, "Device over temperature");
 out:
+#endif
 	return status;
 }
 

@@ -3,45 +3,45 @@
  */
 
 #include "yusur2_type.h"
-#include "yusur2_82598.h"
+#include "yusur2_sn2100.h"
 #include "yusur2_api.h"
 #include "yusur2_common.h"
 #include "yusur2_phy.h"
 
-#define YUSUR2_82598_MAX_TX_QUEUES 32
-#define YUSUR2_82598_MAX_RX_QUEUES 64
-#define YUSUR2_82598_RAR_ENTRIES   16
-#define YUSUR2_82598_MC_TBL_SIZE  128
-#define YUSUR2_82598_VFT_TBL_SIZE 128
-#define YUSUR2_82598_RX_PB_SIZE   512
+#define YUSUR2_sn2100_MAX_TX_QUEUES 32
+#define YUSUR2_sn2100_MAX_RX_QUEUES 64
+#define YUSUR2_sn2100_RAR_ENTRIES   16
+#define YUSUR2_sn2100_MC_TBL_SIZE  128
+#define YUSUR2_sn2100_VFT_TBL_SIZE 128
+#define YUSUR2_sn2100_RX_PB_SIZE   512
 
-STATIC s32 yusur2_get_link_capabilities_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_get_link_capabilities_sn2100(struct yusur2_hw *hw,
 					     yusur2_link_speed *speed,
 					     bool *autoneg);
-STATIC enum yusur2_media_type yusur2_get_media_type_82598(struct yusur2_hw *hw);
-STATIC s32 yusur2_start_mac_link_82598(struct yusur2_hw *hw,
+STATIC enum yusur2_media_type yusur2_get_media_type_sn2100(struct yusur2_hw *hw);
+STATIC s32 yusur2_start_mac_link_sn2100(struct yusur2_hw *hw,
 				      bool autoneg_wait_to_complete);
-STATIC s32 yusur2_check_mac_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_check_mac_link_sn2100(struct yusur2_hw *hw,
 				      yusur2_link_speed *speed, bool *link_up,
 				      bool link_up_wait_to_complete);
-STATIC s32 yusur2_setup_mac_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_setup_mac_link_sn2100(struct yusur2_hw *hw,
 				      yusur2_link_speed speed,
 				      bool autoneg_wait_to_complete);
-STATIC s32 yusur2_setup_copper_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_setup_copper_link_sn2100(struct yusur2_hw *hw,
 					 yusur2_link_speed speed,
 					 bool autoneg_wait_to_complete);
-STATIC s32 yusur2_reset_hw_82598(struct yusur2_hw *hw);
-STATIC s32 yusur2_clear_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq);
-STATIC s32 yusur2_clear_vfta_82598(struct yusur2_hw *hw);
-STATIC void yusur2_set_rxpba_82598(struct yusur2_hw *hw, int num_pb,
+STATIC s32 yusur2_reset_hw_sn2100(struct yusur2_hw *hw);
+STATIC s32 yusur2_clear_vmdq_sn2100(struct yusur2_hw *hw, u32 rar, u32 vmdq);
+STATIC s32 yusur2_clear_vfta_sn2100(struct yusur2_hw *hw);
+STATIC void yusur2_set_rxpba_sn2100(struct yusur2_hw *hw, int num_pb,
 				  u32 headroom, int strategy);
-STATIC s32 yusur2_read_i2c_sff8472_82598(struct yusur2_hw *hw, u8 byte_offset,
+STATIC s32 yusur2_read_i2c_sff8472_sn2100(struct yusur2_hw *hw, u8 byte_offset,
 					u8 *sff8472_data);
 /**
  *  yusur2_set_pcie_completion_timeout - set pci-e completion timeout
  *  @hw: pointer to the HW structure
  *
- *  The defaults for 82598 should be in the range of 50us to 50ms,
+ *  The defaults for sn2100 should be in the range of 50us to 50ms,
  *  however the hardware default for these parts is 500us to 1ms which is less
  *  than the 10ms recommended by the pci-e spec.  To address this we need to
  *  increase the value to either 10ms to 250ms for capability version 1 config,
@@ -49,6 +49,8 @@ STATIC s32 yusur2_read_i2c_sff8472_82598(struct yusur2_hw *hw, u8 byte_offset,
  **/
 void yusur2_set_pcie_completion_timeout(struct yusur2_hw *hw)
 {
+	//TODO: check ...
+#if 0
 	u32 gcr = YUSUR2_READ_REG(hw, YUSUR2_GCR);
 	u16 pcie_devctl2;
 
@@ -77,69 +79,70 @@ out:
 	/* disable completion timeout resend */
 	gcr &= ~YUSUR2_GCR_CMPL_TMOUT_RESEND;
 	YUSUR2_WRITE_REG(hw, YUSUR2_GCR, gcr);
+#endif
 }
 
 /**
- *  yusur2_init_ops_82598 - Inits func ptrs and MAC type
+ *  yusur2_init_ops_sn2100 - Inits func ptrs and MAC type
  *  @hw: pointer to hardware structure
  *
- *  Initialize the function pointers and assign the MAC type for 82598.
+ *  Initialize the function pointers and assign the MAC type for sn2100.
  *  Does not touch the hardware.
  **/
-s32 yusur2_init_ops_82598(struct yusur2_hw *hw)
+s32 yusur2_init_ops_sn2100(struct yusur2_hw *hw)
 {
 	struct yusur2_mac_info *mac = &hw->mac;
 	struct yusur2_phy_info *phy = &hw->phy;
 	s32 ret_val;
 
-	DEBUGFUNC("yusur2_init_ops_82598");
+	DEBUGFUNC("yusur2_init_ops_sn2100");
 
 	ret_val = yusur2_init_phy_ops_generic(hw);
 	ret_val = yusur2_init_ops_generic(hw);
 
 	/* PHY */
-	phy->ops.init = yusur2_init_phy_ops_82598;
+	phy->ops.init = yusur2_init_phy_ops_sn2100;
 
 	/* MAC */
-	mac->ops.start_hw = yusur2_start_hw_82598;
-	mac->ops.enable_relaxed_ordering = yusur2_enable_relaxed_ordering_82598;
-	mac->ops.reset_hw = yusur2_reset_hw_82598;
-	mac->ops.get_media_type = yusur2_get_media_type_82598;
+	mac->ops.start_hw = yusur2_start_hw_sn2100;
+	mac->ops.enable_relaxed_ordering = yusur2_enable_relaxed_ordering_sn2100;
+	mac->ops.reset_hw = yusur2_reset_hw_sn2100;
+	mac->ops.get_media_type = yusur2_get_media_type_sn2100;
 	mac->ops.get_supported_physical_layer =
-				yusur2_get_supported_physical_layer_82598;
-	mac->ops.read_analog_reg8 = yusur2_read_analog_reg8_82598;
-	mac->ops.write_analog_reg8 = yusur2_write_analog_reg8_82598;
-	mac->ops.set_lan_id = yusur2_set_lan_id_multi_port_pcie_82598;
-	mac->ops.enable_rx_dma = yusur2_enable_rx_dma_82598;
+				yusur2_get_supported_physical_layer_sn2100;
+	mac->ops.read_analog_reg8 = yusur2_read_analog_reg8_sn2100;
+	mac->ops.write_analog_reg8 = yusur2_write_analog_reg8_sn2100;
+	mac->ops.set_lan_id = yusur2_set_lan_id_multi_port_pcie_sn2100;
+	mac->ops.enable_rx_dma = yusur2_enable_rx_dma_sn2100;
 
 	/* RAR, Multicast, VLAN */
-	mac->ops.set_vmdq = yusur2_set_vmdq_82598;
-	mac->ops.clear_vmdq = yusur2_clear_vmdq_82598;
-	mac->ops.set_vfta = yusur2_set_vfta_82598;
+	mac->ops.set_vmdq = yusur2_set_vmdq_sn2100;
+	mac->ops.clear_vmdq = yusur2_clear_vmdq_sn2100;
+	mac->ops.set_vfta = yusur2_set_vfta_sn2100;
 	mac->ops.set_vlvf = NULL;
-	mac->ops.clear_vfta = yusur2_clear_vfta_82598;
+	mac->ops.clear_vfta = yusur2_clear_vfta_sn2100;
 
 	/* Flow Control */
-	mac->ops.fc_enable = yusur2_fc_enable_82598;
+	mac->ops.fc_enable = yusur2_fc_enable_sn2100;
 
-	mac->mcft_size		= YUSUR2_82598_MC_TBL_SIZE;
-	mac->vft_size		= YUSUR2_82598_VFT_TBL_SIZE;
-	mac->num_rar_entries	= YUSUR2_82598_RAR_ENTRIES;
-	mac->rx_pb_size		= YUSUR2_82598_RX_PB_SIZE;
-	mac->max_rx_queues	= YUSUR2_82598_MAX_RX_QUEUES;
-	mac->max_tx_queues	= YUSUR2_82598_MAX_TX_QUEUES;
+	mac->mcft_size		= YUSUR2_sn2100_MC_TBL_SIZE;
+	mac->vft_size		= YUSUR2_sn2100_VFT_TBL_SIZE;
+	mac->num_rar_entries	= YUSUR2_sn2100_RAR_ENTRIES;
+	mac->rx_pb_size		= YUSUR2_sn2100_RX_PB_SIZE;
+	mac->max_rx_queues	= YUSUR2_sn2100_MAX_RX_QUEUES;
+	mac->max_tx_queues	= YUSUR2_sn2100_MAX_TX_QUEUES;
 	mac->max_msix_vectors	= yusur2_get_pcie_msix_count_generic(hw);
 
 	/* SFP+ Module */
-	phy->ops.read_i2c_eeprom = yusur2_read_i2c_eeprom_82598;
-	phy->ops.read_i2c_sff8472 = yusur2_read_i2c_sff8472_82598;
+	phy->ops.read_i2c_eeprom = yusur2_read_i2c_eeprom_sn2100;
+	phy->ops.read_i2c_sff8472 = yusur2_read_i2c_sff8472_sn2100;
 
 	/* Link */
-	mac->ops.check_link = yusur2_check_mac_link_82598;
-	mac->ops.setup_link = yusur2_setup_mac_link_82598;
+	mac->ops.check_link = yusur2_check_mac_link_sn2100;
+	mac->ops.setup_link = yusur2_setup_mac_link_sn2100;
 	mac->ops.flap_tx_laser = NULL;
-	mac->ops.get_link_capabilities = yusur2_get_link_capabilities_82598;
-	mac->ops.setup_rxpba = yusur2_set_rxpba_82598;
+	mac->ops.get_link_capabilities = yusur2_get_link_capabilities_sn2100;
+	mac->ops.setup_rxpba = yusur2_set_rxpba_sn2100;
 
 	/* Manageability interface */
 	mac->ops.set_fw_drv_ver = NULL;
@@ -150,7 +153,7 @@ s32 yusur2_init_ops_82598(struct yusur2_hw *hw)
 }
 
 /**
- *  yusur2_init_phy_ops_82598 - PHY/SFP specific init
+ *  yusur2_init_phy_ops_sn2100 - PHY/SFP specific init
  *  @hw: pointer to hardware structure
  *
  *  Initialize any function pointers that were not able to be
@@ -158,21 +161,21 @@ s32 yusur2_init_ops_82598(struct yusur2_hw *hw)
  *  not known.  Perform the SFP init if necessary.
  *
  **/
-s32 yusur2_init_phy_ops_82598(struct yusur2_hw *hw)
+s32 yusur2_init_phy_ops_sn2100(struct yusur2_hw *hw)
 {
 	struct yusur2_mac_info *mac = &hw->mac;
 	struct yusur2_phy_info *phy = &hw->phy;
 	s32 ret_val = YUSUR2_SUCCESS;
 	u16 list_offset, data_offset;
 
-	DEBUGFUNC("yusur2_init_phy_ops_82598");
+	DEBUGFUNC("yusur2_init_phy_ops_sn2100");
 
 	/* Identify the PHY */
 	phy->ops.identify(hw);
 
 	/* Overwrite the link function pointers if copper PHY */
 	if (mac->ops.get_media_type(hw) == yusur2_media_type_copper) {
-		mac->ops.setup_link = yusur2_setup_copper_link_82598;
+		mac->ops.setup_link = yusur2_setup_copper_link_sn2100;
 		mac->ops.get_link_capabilities =
 				yusur2_get_copper_link_capabilities_generic;
 	}
@@ -214,40 +217,24 @@ out:
 }
 
 /**
- *  yusur2_start_hw_82598 - Prepare hardware for Tx/Rx
+ *  yusur2_start_hw_sn2100 - Prepare hardware for Tx/Rx
  *  @hw: pointer to hardware structure
  *
  *  Starts the hardware using the generic start_hw function.
  *  Disables relaxed ordering Then set pcie completion timeout
  *
  **/
-s32 yusur2_start_hw_82598(struct yusur2_hw *hw)
+s32 yusur2_start_hw_sn2100(struct yusur2_hw *hw)
 {
 	u32 regval;
 	u32 i;
 	s32 ret_val = YUSUR2_SUCCESS;
 
-	DEBUGFUNC("yusur2_start_hw_82598");
+	DEBUGFUNC("yusur2_start_hw_sn2100");
 
 	ret_val = yusur2_start_hw_generic(hw);
 	if (ret_val)
 		return ret_val;
-
-	/* Disable relaxed ordering */
-	for (i = 0; ((i < hw->mac.max_tx_queues) &&
-	     (i < YUSUR2_DCA_MAX_QUEUES_82598)); i++) {
-		regval = YUSUR2_READ_REG(hw, YUSUR2_DCA_TXCTRL(i));
-		regval &= ~YUSUR2_DCA_TXCTRL_DESC_WRO_EN;
-		YUSUR2_WRITE_REG(hw, YUSUR2_DCA_TXCTRL(i), regval);
-	}
-
-	for (i = 0; ((i < hw->mac.max_rx_queues) &&
-	     (i < YUSUR2_DCA_MAX_QUEUES_82598)); i++) {
-		regval = YUSUR2_READ_REG(hw, YUSUR2_DCA_RXCTRL(i));
-		regval &= ~(YUSUR2_DCA_RXCTRL_DATA_WRO_EN |
-			    YUSUR2_DCA_RXCTRL_HEAD_WRO_EN);
-		YUSUR2_WRITE_REG(hw, YUSUR2_DCA_RXCTRL(i), regval);
-	}
 
 	/* set the completion timeout for interface */
 	yusur2_set_pcie_completion_timeout(hw);
@@ -256,21 +243,21 @@ s32 yusur2_start_hw_82598(struct yusur2_hw *hw)
 }
 
 /**
- *  yusur2_get_link_capabilities_82598 - Determines link capabilities
+ *  yusur2_get_link_capabilities_sn2100 - Determines link capabilities
  *  @hw: pointer to hardware structure
  *  @speed: pointer to link speed
  *  @autoneg: boolean auto-negotiation value
  *
  *  Determines the link capabilities by reading the AUTOC register.
  **/
-STATIC s32 yusur2_get_link_capabilities_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_get_link_capabilities_sn2100(struct yusur2_hw *hw,
 					     yusur2_link_speed *speed,
 					     bool *autoneg)
 {
 	s32 status = YUSUR2_SUCCESS;
 	u32 autoc = 0;
 
-	DEBUGFUNC("yusur2_get_link_capabilities_82598");
+	DEBUGFUNC("yusur2_get_link_capabilities_sn2100");
 
 	/*
 	 * Determine link capabilities based on the stored value of AUTOC,
@@ -317,16 +304,19 @@ STATIC s32 yusur2_get_link_capabilities_82598(struct yusur2_hw *hw,
 }
 
 /**
- *  yusur2_get_media_type_82598 - Determines media type
+ *  yusur2_get_media_type_sn2100 - Determines media type
  *  @hw: pointer to hardware structure
  *
  *  Returns the media type (fiber, copper, backplane)
  **/
-STATIC enum yusur2_media_type yusur2_get_media_type_82598(struct yusur2_hw *hw)
+STATIC enum yusur2_media_type yusur2_get_media_type_sn2100(struct yusur2_hw *hw)
 {
 	enum yusur2_media_type media_type;
 
-	DEBUGFUNC("yusur2_get_media_type_82598");
+	DEBUGFUNC("yusur2_get_media_type_sn2100");
+
+	//TODO: check
+#if 0
 
 	/* Detect if there is a copper PHY attached. */
 	switch (hw->phy.type) {
@@ -338,27 +328,27 @@ STATIC enum yusur2_media_type yusur2_get_media_type_82598(struct yusur2_hw *hw)
 		break;
 	}
 
-	/* Media type for I82598 is based on device ID */
+	/* Media type for Isn2100 is based on device ID */
 	switch (hw->device_id) {
-	case YUSUR2_DEV_ID_82598:
-	case YUSUR2_DEV_ID_82598_BX:
+	case YUSUR2_DEV_ID_sn2100:
+	case YUSUR2_DEV_ID_sn2100_BX:
 		/* Default device ID is mezzanine card KX/KX4 */
 		media_type = yusur2_media_type_backplane;
 		break;
-	case YUSUR2_DEV_ID_82598AF_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598AF_SINGLE_PORT:
-	case YUSUR2_DEV_ID_82598_DA_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598_SR_DUAL_PORT_EM:
-	case YUSUR2_DEV_ID_82598EB_XF_LR:
-	case YUSUR2_DEV_ID_82598EB_SFP_LOM:
+	case YUSUR2_DEV_ID_sn2100AF_DUAL_PORT:
+	case YUSUR2_DEV_ID_sn2100AF_SINGLE_PORT:
+	case YUSUR2_DEV_ID_sn2100_DA_DUAL_PORT:
+	case YUSUR2_DEV_ID_sn2100_SR_DUAL_PORT_EM:
+	case YUSUR2_DEV_ID_sn2100EB_XF_LR:
+	case YUSUR2_DEV_ID_sn2100EB_SFP_LOM:
 		media_type = yusur2_media_type_fiber;
 		break;
-	case YUSUR2_DEV_ID_82598EB_CX4:
-	case YUSUR2_DEV_ID_82598_CX4_DUAL_PORT:
+	case YUSUR2_DEV_ID_sn2100EB_CX4:
+	case YUSUR2_DEV_ID_sn2100_CX4_DUAL_PORT:
 		media_type = yusur2_media_type_cx4;
 		break;
-	case YUSUR2_DEV_ID_82598AT:
-	case YUSUR2_DEV_ID_82598AT2:
+	case YUSUR2_DEV_ID_sn2100AT:
+	case YUSUR2_DEV_ID_sn2100AT2:
 		media_type = yusur2_media_type_copper;
 		break;
 	default:
@@ -366,16 +356,18 @@ STATIC enum yusur2_media_type yusur2_get_media_type_82598(struct yusur2_hw *hw)
 		break;
 	}
 out:
+#endif
+	media_type = yusur2_media_type_fiber;
 	return media_type;
 }
 
 /**
- *  yusur2_fc_enable_82598 - Enable flow control
+ *  yusur2_fc_enable_sn2100 - Enable flow control
  *  @hw: pointer to hardware structure
  *
  *  Enable flow control according to the current settings.
  **/
-s32 yusur2_fc_enable_82598(struct yusur2_hw *hw)
+s32 yusur2_fc_enable_sn2100(struct yusur2_hw *hw)
 {
 	s32 ret_val = YUSUR2_SUCCESS;
 	u32 fctrl_reg;
@@ -386,7 +378,7 @@ s32 yusur2_fc_enable_82598(struct yusur2_hw *hw)
 	int i;
 	bool link_up;
 
-	DEBUGFUNC("yusur2_fc_enable_82598");
+	DEBUGFUNC("yusur2_fc_enable_sn2100");
 
 	/* Validate the water mark configuration */
 	if (!hw->fc.pause_time) {
@@ -408,9 +400,9 @@ s32 yusur2_fc_enable_82598(struct yusur2_hw *hw)
 	}
 
 	/*
-	 * On 82598 having Rx FC on causes resets while doing 1G
+	 * On sn2100 having Rx FC on causes resets while doing 1G
 	 * so if it's on turn it off once we know link_speed. For
-	 * more details see 82598 Specification update.
+	 * more details see sn2100 Specification update.
 	 */
 	hw->mac.ops.check_link(hw, &link_speed, &link_up, false);
 	if (link_up && link_speed == YUSUR2_LINK_SPEED_1GB_FULL) {
@@ -517,14 +509,14 @@ out:
 }
 
 /**
- *  yusur2_start_mac_link_82598 - Configures MAC link settings
+ *  yusur2_start_mac_link_sn2100 - Configures MAC link settings
  *  @hw: pointer to hardware structure
  *  @autoneg_wait_to_complete: true when waiting for completion is needed
  *
  *  Configures link settings based on values in the yusur2_hw struct.
  *  Restarts the link.  Performs autonegotiation if needed.
  **/
-STATIC s32 yusur2_start_mac_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_start_mac_link_sn2100(struct yusur2_hw *hw,
 				      bool autoneg_wait_to_complete)
 {
 	u32 autoc_reg;
@@ -532,7 +524,7 @@ STATIC s32 yusur2_start_mac_link_82598(struct yusur2_hw *hw,
 	u32 i;
 	s32 status = YUSUR2_SUCCESS;
 
-	DEBUGFUNC("yusur2_start_mac_link_82598");
+	DEBUGFUNC("yusur2_start_mac_link_sn2100");
 
 	/* Restart link */
 	autoc_reg = YUSUR2_READ_REG(hw, YUSUR2_AUTOC);
@@ -574,10 +566,12 @@ STATIC s32 yusur2_start_mac_link_82598(struct yusur2_hw *hw,
  **/
 STATIC s32 yusur2_validate_link_ready(struct yusur2_hw *hw)
 {
+	//TODO: check phy link status
+#if 0
 	u32 timeout;
 	u16 an_reg;
 
-	if (hw->device_id != YUSUR2_DEV_ID_82598AT2)
+	if (hw->device_id != YUSUR2_DEV_ID_sn2100AT2)
 		return YUSUR2_SUCCESS;
 
 	for (timeout = 0;
@@ -596,12 +590,12 @@ STATIC s32 yusur2_validate_link_ready(struct yusur2_hw *hw)
 		DEBUGOUT("Link was indicated but link is down\n");
 		return YUSUR2_ERR_LINK_SETUP;
 	}
-
+#endif
 	return YUSUR2_SUCCESS;
 }
 
 /**
- *  yusur2_check_mac_link_82598 - Get link/speed status
+ *  yusur2_check_mac_link_sn2100 - Get link/speed status
  *  @hw: pointer to hardware structure
  *  @speed: pointer to link speed
  *  @link_up: true is link is up, false otherwise
@@ -609,7 +603,7 @@ STATIC s32 yusur2_validate_link_ready(struct yusur2_hw *hw)
  *
  *  Reads the links register to determine if link is up and the current speed
  **/
-STATIC s32 yusur2_check_mac_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_check_mac_link_sn2100(struct yusur2_hw *hw,
 				      yusur2_link_speed *speed, bool *link_up,
 				      bool link_up_wait_to_complete)
 {
@@ -617,7 +611,9 @@ STATIC s32 yusur2_check_mac_link_82598(struct yusur2_hw *hw,
 	u32 i;
 	u16 link_reg, adapt_comp_reg;
 
-	DEBUGFUNC("yusur2_check_mac_link_82598");
+	//TODO:check link status
+	DEBUGFUNC("yusur2_check_mac_link_sn2100");
+#if 0
 
 	/*
 	 * SERDES PHY requires us to read link status from undocumented
@@ -682,23 +678,24 @@ STATIC s32 yusur2_check_mac_link_82598(struct yusur2_hw *hw,
 	else
 		*speed = YUSUR2_LINK_SPEED_1GB_FULL;
 
-	if ((hw->device_id == YUSUR2_DEV_ID_82598AT2) && (*link_up == true) &&
+	if ((hw->device_id == YUSUR2_DEV_ID_sn2100AT2) && (*link_up == true) &&
 	    (yusur2_validate_link_ready(hw) != YUSUR2_SUCCESS))
 		*link_up = false;
 
 out:
+#endif
 	return YUSUR2_SUCCESS;
 }
 
 /**
- *  yusur2_setup_mac_link_82598 - Set MAC link speed
+ *  yusur2_setup_mac_link_sn2100 - Set MAC link speed
  *  @hw: pointer to hardware structure
  *  @speed: new link speed
  *  @autoneg_wait_to_complete: true when waiting for completion is needed
  *
  *  Set the link speed in the AUTOC register and restarts link.
  **/
-STATIC s32 yusur2_setup_mac_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_setup_mac_link_sn2100(struct yusur2_hw *hw,
 				      yusur2_link_speed speed,
 				      bool autoneg_wait_to_complete)
 {
@@ -709,7 +706,7 @@ STATIC s32 yusur2_setup_mac_link_82598(struct yusur2_hw *hw,
 	u32 autoc = curr_autoc;
 	u32 link_mode = autoc & YUSUR2_AUTOC_LMS_MASK;
 
-	DEBUGFUNC("yusur2_setup_mac_link_82598");
+	DEBUGFUNC("yusur2_setup_mac_link_sn2100");
 
 	/* Check to see if speed passed in is supported. */
 	yusur2_get_link_capabilities(hw, &link_capabilities, &autoneg);
@@ -736,7 +733,7 @@ STATIC s32 yusur2_setup_mac_link_82598(struct yusur2_hw *hw,
 		 * yusur2_hw This will write the AUTOC register based on the new
 		 * stored values
 		 */
-		status = yusur2_start_mac_link_82598(hw,
+		status = yusur2_start_mac_link_sn2100(hw,
 						    autoneg_wait_to_complete);
 	}
 
@@ -745,39 +742,39 @@ STATIC s32 yusur2_setup_mac_link_82598(struct yusur2_hw *hw,
 
 
 /**
- *  yusur2_setup_copper_link_82598 - Set the PHY autoneg advertised field
+ *  yusur2_setup_copper_link_sn2100 - Set the PHY autoneg advertised field
  *  @hw: pointer to hardware structure
  *  @speed: new link speed
  *  @autoneg_wait_to_complete: true if waiting is needed to complete
  *
  *  Sets the link speed in the AUTOC register in the MAC and restarts link.
  **/
-STATIC s32 yusur2_setup_copper_link_82598(struct yusur2_hw *hw,
+STATIC s32 yusur2_setup_copper_link_sn2100(struct yusur2_hw *hw,
 					 yusur2_link_speed speed,
 					 bool autoneg_wait_to_complete)
 {
 	s32 status;
 
-	DEBUGFUNC("yusur2_setup_copper_link_82598");
+	DEBUGFUNC("yusur2_setup_copper_link_sn2100");
 
 	/* Setup the PHY according to input speed */
 	status = hw->phy.ops.setup_link_speed(hw, speed,
 					      autoneg_wait_to_complete);
 	/* Set up MAC */
-	yusur2_start_mac_link_82598(hw, autoneg_wait_to_complete);
+	yusur2_start_mac_link_sn2100(hw, autoneg_wait_to_complete);
 
 	return status;
 }
 
 /**
- *  yusur2_reset_hw_82598 - Performs hardware reset
+ *  yusur2_reset_hw_sn2100 - Performs hardware reset
  *  @hw: pointer to hardware structure
  *
  *  Resets the hardware by resetting the transmit and receive units, masks and
  *  clears all interrupts, performing a PHY reset, and performing a link (MAC)
  *  reset.
  **/
-STATIC s32 yusur2_reset_hw_82598(struct yusur2_hw *hw)
+STATIC s32 yusur2_reset_hw_sn2100(struct yusur2_hw *hw)
 {
 	s32 status = YUSUR2_SUCCESS;
 	s32 phy_status = YUSUR2_SUCCESS;
@@ -787,7 +784,7 @@ STATIC s32 yusur2_reset_hw_82598(struct yusur2_hw *hw)
 	u32 autoc;
 	u8  analog_val;
 
-	DEBUGFUNC("yusur2_reset_hw_82598");
+	DEBUGFUNC("yusur2_reset_hw_sn2100");
 
 	/* Call adapter stop to disable tx/rx and clear interrupts */
 	status = hw->mac.ops.stop_adapter(hw);
@@ -908,17 +905,17 @@ reset_hw_out:
 }
 
 /**
- *  yusur2_set_vmdq_82598 - Associate a VMDq set index with a rx address
+ *  yusur2_set_vmdq_sn2100 - Associate a VMDq set index with a rx address
  *  @hw: pointer to hardware struct
  *  @rar: receive address register index to associate with a VMDq index
  *  @vmdq: VMDq set index
  **/
-s32 yusur2_set_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq)
+s32 yusur2_set_vmdq_sn2100(struct yusur2_hw *hw, u32 rar, u32 vmdq)
 {
 	u32 rar_high;
 	u32 rar_entries = hw->mac.num_rar_entries;
 
-	DEBUGFUNC("yusur2_set_vmdq_82598");
+	DEBUGFUNC("yusur2_set_vmdq_sn2100");
 
 	/* Make sure we are using a valid rar index range */
 	if (rar >= rar_entries) {
@@ -934,12 +931,12 @@ s32 yusur2_set_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq)
 }
 
 /**
- *  yusur2_clear_vmdq_82598 - Disassociate a VMDq set index from an rx address
+ *  yusur2_clear_vmdq_sn2100 - Disassociate a VMDq set index from an rx address
  *  @hw: pointer to hardware struct
  *  @rar: receive address register index to associate with a VMDq index
- *  @vmdq: VMDq clear index (not used in 82598, but elsewhere)
+ *  @vmdq: VMDq clear index (not used in sn2100, but elsewhere)
  **/
-STATIC s32 yusur2_clear_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq)
+STATIC s32 yusur2_clear_vmdq_sn2100(struct yusur2_hw *hw, u32 rar, u32 vmdq)
 {
 	u32 rar_high;
 	u32 rar_entries = hw->mac.num_rar_entries;
@@ -962,7 +959,7 @@ STATIC s32 yusur2_clear_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq)
 }
 
 /**
- *  yusur2_set_vfta_82598 - Set VLAN filter table
+ *  yusur2_set_vfta_sn2100 - Set VLAN filter table
  *  @hw: pointer to hardware structure
  *  @vlan: VLAN id to write to VLAN filter
  *  @vind: VMDq output index that maps queue to VLAN id in VFTA
@@ -971,7 +968,7 @@ STATIC s32 yusur2_clear_vmdq_82598(struct yusur2_hw *hw, u32 rar, u32 vmdq)
  *
  *  Turn on/off specified VLAN in the VLAN filter table.
  **/
-s32 yusur2_set_vfta_82598(struct yusur2_hw *hw, u32 vlan, u32 vind,
+s32 yusur2_set_vfta_sn2100(struct yusur2_hw *hw, u32 vlan, u32 vind,
 			 bool vlan_on, bool vlvf_bypass)
 {
 	u32 regindex;
@@ -981,7 +978,7 @@ s32 yusur2_set_vfta_82598(struct yusur2_hw *hw, u32 vlan, u32 vind,
 
 	UNREFERENCED_1PARAMETER(vlvf_bypass);
 
-	DEBUGFUNC("yusur2_set_vfta_82598");
+	DEBUGFUNC("yusur2_set_vfta_sn2100");
 
 	if (vlan > 4095)
 		return YUSUR2_ERR_PARAM;
@@ -1015,17 +1012,17 @@ s32 yusur2_set_vfta_82598(struct yusur2_hw *hw, u32 vlan, u32 vind,
 }
 
 /**
- *  yusur2_clear_vfta_82598 - Clear VLAN filter table
+ *  yusur2_clear_vfta_sn2100 - Clear VLAN filter table
  *  @hw: pointer to hardware structure
  *
  *  Clears the VLAN filer table, and the VMDq index associated with the filter
  **/
-STATIC s32 yusur2_clear_vfta_82598(struct yusur2_hw *hw)
+STATIC s32 yusur2_clear_vfta_sn2100(struct yusur2_hw *hw)
 {
 	u32 offset;
 	u32 vlanbyte;
 
-	DEBUGFUNC("yusur2_clear_vfta_82598");
+	DEBUGFUNC("yusur2_clear_vfta_sn2100");
 
 	for (offset = 0; offset < hw->mac.vft_size; offset++)
 		YUSUR2_WRITE_REG(hw, YUSUR2_VFTA(offset), 0);
@@ -1039,18 +1036,18 @@ STATIC s32 yusur2_clear_vfta_82598(struct yusur2_hw *hw)
 }
 
 /**
- *  yusur2_read_analog_reg8_82598 - Reads 8 bit Atlas analog register
+ *  yusur2_read_analog_reg8_sn2100 - Reads 8 bit Atlas analog register
  *  @hw: pointer to hardware structure
  *  @reg: analog register to read
  *  @val: read value
  *
  *  Performs read operation to Atlas analog register specified.
  **/
-s32 yusur2_read_analog_reg8_82598(struct yusur2_hw *hw, u32 reg, u8 *val)
+s32 yusur2_read_analog_reg8_sn2100(struct yusur2_hw *hw, u32 reg, u8 *val)
 {
 	u32  atlas_ctl;
 
-	DEBUGFUNC("yusur2_read_analog_reg8_82598");
+	DEBUGFUNC("yusur2_read_analog_reg8_sn2100");
 
 	YUSUR2_WRITE_REG(hw, YUSUR2_ATLASCTL,
 			YUSUR2_ATLASCTL_WRITE_CMD | (reg << 8));
@@ -1063,18 +1060,18 @@ s32 yusur2_read_analog_reg8_82598(struct yusur2_hw *hw, u32 reg, u8 *val)
 }
 
 /**
- *  yusur2_write_analog_reg8_82598 - Writes 8 bit Atlas analog register
+ *  yusur2_write_analog_reg8_sn2100 - Writes 8 bit Atlas analog register
  *  @hw: pointer to hardware structure
  *  @reg: atlas register to write
  *  @val: value to write
  *
  *  Performs write operation to Atlas analog register specified.
  **/
-s32 yusur2_write_analog_reg8_82598(struct yusur2_hw *hw, u32 reg, u8 val)
+s32 yusur2_write_analog_reg8_sn2100(struct yusur2_hw *hw, u32 reg, u8 val)
 {
 	u32  atlas_ctl;
 
-	DEBUGFUNC("yusur2_write_analog_reg8_82598");
+	DEBUGFUNC("yusur2_write_analog_reg8_sn2100");
 
 	atlas_ctl = (reg << 8) | val;
 	YUSUR2_WRITE_REG(hw, YUSUR2_ATLASCTL, atlas_ctl);
@@ -1085,7 +1082,7 @@ s32 yusur2_write_analog_reg8_82598(struct yusur2_hw *hw, u32 reg, u8 val)
 }
 
 /**
- *  yusur2_read_i2c_phy_82598 - Reads 8 bit word over I2C interface.
+ *  yusur2_read_i2c_phy_sn2100 - Reads 8 bit word over I2C interface.
  *  @hw: pointer to hardware structure
  *  @dev_addr: address to read from
  *  @byte_offset: byte offset to read from dev_addr
@@ -1093,7 +1090,7 @@ s32 yusur2_write_analog_reg8_82598(struct yusur2_hw *hw, u32 reg, u8 val)
  *
  *  Performs 8 byte read operation to SFP module's EEPROM over I2C interface.
  **/
-STATIC s32 yusur2_read_i2c_phy_82598(struct yusur2_hw *hw, u8 dev_addr,
+STATIC s32 yusur2_read_i2c_phy_sn2100(struct yusur2_hw *hw, u8 dev_addr,
 				    u8 byte_offset, u8 *eeprom_data)
 {
 	s32 status = YUSUR2_SUCCESS;
@@ -1103,7 +1100,7 @@ STATIC s32 yusur2_read_i2c_phy_82598(struct yusur2_hw *hw, u8 dev_addr,
 	u16 gssr;
 	u32 i;
 
-	DEBUGFUNC("yusur2_read_i2c_phy_82598");
+	DEBUGFUNC("yusur2_read_i2c_phy_sn2100");
 
 	if (YUSUR2_READ_REG(hw, YUSUR2_STATUS) & YUSUR2_STATUS_LAN_ID_1)
 		gssr = YUSUR2_GSSR_PHY1_SM;
@@ -1159,50 +1156,52 @@ out:
 }
 
 /**
- *  yusur2_read_i2c_eeprom_82598 - Reads 8 bit word over I2C interface.
+ *  yusur2_read_i2c_eeprom_sn2100 - Reads 8 bit word over I2C interface.
  *  @hw: pointer to hardware structure
  *  @byte_offset: EEPROM byte offset to read
  *  @eeprom_data: value read
  *
  *  Performs 8 byte read operation to SFP module's EEPROM over I2C interface.
  **/
-s32 yusur2_read_i2c_eeprom_82598(struct yusur2_hw *hw, u8 byte_offset,
+s32 yusur2_read_i2c_eeprom_sn2100(struct yusur2_hw *hw, u8 byte_offset,
 				u8 *eeprom_data)
 {
-	return yusur2_read_i2c_phy_82598(hw, YUSUR2_I2C_EEPROM_DEV_ADDR,
+	return yusur2_read_i2c_phy_sn2100(hw, YUSUR2_I2C_EEPROM_DEV_ADDR,
 					byte_offset, eeprom_data);
 }
 
 /**
- *  yusur2_read_i2c_sff8472_82598 - Reads 8 bit word over I2C interface.
+ *  yusur2_read_i2c_sff8472_sn2100 - Reads 8 bit word over I2C interface.
  *  @hw: pointer to hardware structure
  *  @byte_offset: byte offset at address 0xA2
  *  @sff8472_data: value read
  *
  *  Performs 8 byte read operation to SFP module's SFF-8472 data over I2C
  **/
-STATIC s32 yusur2_read_i2c_sff8472_82598(struct yusur2_hw *hw, u8 byte_offset,
+STATIC s32 yusur2_read_i2c_sff8472_sn2100(struct yusur2_hw *hw, u8 byte_offset,
 					u8 *sff8472_data)
 {
-	return yusur2_read_i2c_phy_82598(hw, YUSUR2_I2C_EEPROM_DEV_ADDR2,
+	return yusur2_read_i2c_phy_sn2100(hw, YUSUR2_I2C_EEPROM_DEV_ADDR2,
 					byte_offset, sff8472_data);
 }
 
 /**
- *  yusur2_get_supported_physical_layer_82598 - Returns physical layer type
+ *  yusur2_get_supported_physical_layer_sn2100 - Returns physical layer type
  *  @hw: pointer to hardware structure
  *
  *  Determines physical layer capabilities of the current configuration.
  **/
-u64 yusur2_get_supported_physical_layer_82598(struct yusur2_hw *hw)
+u64 yusur2_get_supported_physical_layer_sn2100(struct yusur2_hw *hw)
 {
+	//TODO: check further...
+#if 0
 	u64 physical_layer = YUSUR2_PHYSICAL_LAYER_UNKNOWN;
 	u32 autoc = YUSUR2_READ_REG(hw, YUSUR2_AUTOC);
 	u32 pma_pmd_10g = autoc & YUSUR2_AUTOC_10G_PMA_PMD_MASK;
 	u32 pma_pmd_1g = autoc & YUSUR2_AUTOC_1G_PMA_PMD_MASK;
 	u16 ext_ability = 0;
 
-	DEBUGFUNC("yusur2_get_supported_physical_layer_82598");
+	DEBUGFUNC("yusur2_get_supported_physical_layer_sn2100");
 
 	hw->phy.ops.identify(hw);
 
@@ -1271,15 +1270,15 @@ u64 yusur2_get_supported_physical_layer_82598(struct yusur2_hw *hw)
 	}
 
 	switch (hw->device_id) {
-	case YUSUR2_DEV_ID_82598_DA_DUAL_PORT:
+	case YUSUR2_DEV_ID_sn2100_DA_DUAL_PORT:
 		physical_layer = YUSUR2_PHYSICAL_LAYER_SFP_PLUS_CU;
 		break;
-	case YUSUR2_DEV_ID_82598AF_DUAL_PORT:
-	case YUSUR2_DEV_ID_82598AF_SINGLE_PORT:
-	case YUSUR2_DEV_ID_82598_SR_DUAL_PORT_EM:
+	case YUSUR2_DEV_ID_sn2100AF_DUAL_PORT:
+	case YUSUR2_DEV_ID_sn2100AF_SINGLE_PORT:
+	case YUSUR2_DEV_ID_sn2100_SR_DUAL_PORT_EM:
 		physical_layer = YUSUR2_PHYSICAL_LAYER_10GBASE_SR;
 		break;
-	case YUSUR2_DEV_ID_82598EB_XF_LR:
+	case YUSUR2_DEV_ID_sn2100EB_XF_LR:
 		physical_layer = YUSUR2_PHYSICAL_LAYER_10GBASE_LR;
 		break;
 	default:
@@ -1287,24 +1286,26 @@ u64 yusur2_get_supported_physical_layer_82598(struct yusur2_hw *hw)
 	}
 
 out:
+#endif
+	u64 physical_layer = YUSUR2_PHYSICAL_LAYER_10GBASE_T;
 	return physical_layer;
 }
 
 /**
- *  yusur2_set_lan_id_multi_port_pcie_82598 - Set LAN id for PCIe multiple
+ *  yusur2_set_lan_id_multi_port_pcie_sn2100 - Set LAN id for PCIe multiple
  *  port devices.
  *  @hw: pointer to the HW structure
  *
  *  Calls common function and corrects issue with some single port devices
  *  that enable LAN1 but not LAN0.
  **/
-void yusur2_set_lan_id_multi_port_pcie_82598(struct yusur2_hw *hw)
+void yusur2_set_lan_id_multi_port_pcie_sn2100(struct yusur2_hw *hw)
 {
 	struct yusur2_bus_info *bus = &hw->bus;
 	u16 pci_gen = 0;
 	u16 pci_ctrl2 = 0;
 
-	DEBUGFUNC("yusur2_set_lan_id_multi_port_pcie_82598");
+	DEBUGFUNC("yusur2_set_lan_id_multi_port_pcie_sn2100");
 
 	yusur2_set_lan_id_multi_port_pcie(hw);
 
@@ -1325,43 +1326,25 @@ void yusur2_set_lan_id_multi_port_pcie_82598(struct yusur2_hw *hw)
 }
 
 /**
- *  yusur2_enable_relaxed_ordering_82598 - enable relaxed ordering
+ *  yusur2_enable_relaxed_ordering_sn2100 - enable relaxed ordering
  *  @hw: pointer to hardware structure
  *
  **/
-void yusur2_enable_relaxed_ordering_82598(struct yusur2_hw *hw)
+void yusur2_enable_relaxed_ordering_sn2100(struct yusur2_hw *hw)
 {
-	u32 regval;
-	u32 i;
-
-	DEBUGFUNC("yusur2_enable_relaxed_ordering_82598");
-
-	/* Enable relaxed ordering */
-	for (i = 0; ((i < hw->mac.max_tx_queues) &&
-	     (i < YUSUR2_DCA_MAX_QUEUES_82598)); i++) {
-		regval = YUSUR2_READ_REG(hw, YUSUR2_DCA_TXCTRL(i));
-		regval |= YUSUR2_DCA_TXCTRL_DESC_WRO_EN;
-		YUSUR2_WRITE_REG(hw, YUSUR2_DCA_TXCTRL(i), regval);
-	}
-
-	for (i = 0; ((i < hw->mac.max_rx_queues) &&
-	     (i < YUSUR2_DCA_MAX_QUEUES_82598)); i++) {
-		regval = YUSUR2_READ_REG(hw, YUSUR2_DCA_RXCTRL(i));
-		regval |= YUSUR2_DCA_RXCTRL_DATA_WRO_EN |
-			  YUSUR2_DCA_RXCTRL_HEAD_WRO_EN;
-		YUSUR2_WRITE_REG(hw, YUSUR2_DCA_RXCTRL(i), regval);
-	}
+	//TODO: check...
+	DEBUGFUNC("yusur2_enable_relaxed_ordering_sn2100");
 
 }
 
 /**
- * yusur2_set_rxpba_82598 - Initialize RX packet buffer
+ * yusur2_set_rxpba_sn2100 - Initialize RX packet buffer
  * @hw: pointer to hardware structure
  * @num_pb: number of packet buffers to allocate
  * @headroom: reserve n KB of headroom
  * @strategy: packet buffer allocation strategy
  **/
-STATIC void yusur2_set_rxpba_82598(struct yusur2_hw *hw, int num_pb,
+STATIC void yusur2_set_rxpba_sn2100(struct yusur2_hw *hw, int num_pb,
 				  u32 headroom, int strategy)
 {
 	u32 rxpktsize = YUSUR2_RXPBSIZE_64KB;
@@ -1395,15 +1378,15 @@ STATIC void yusur2_set_rxpba_82598(struct yusur2_hw *hw, int num_pb,
 }
 
 /**
- *  yusur2_enable_rx_dma_82598 - Enable the Rx DMA unit
+ *  yusur2_enable_rx_dma_sn2100 - Enable the Rx DMA unit
  *  @hw: pointer to hardware structure
  *  @regval: register value to write to RXCTRL
  *
  *  Enables the Rx DMA unit
  **/
-s32 yusur2_enable_rx_dma_82598(struct yusur2_hw *hw, u32 regval)
+s32 yusur2_enable_rx_dma_sn2100(struct yusur2_hw *hw, u32 regval)
 {
-	DEBUGFUNC("yusur2_enable_rx_dma_82598");
+	DEBUGFUNC("yusur2_enable_rx_dma_sn2100");
 
 	YUSUR2_WRITE_REG(hw, YUSUR2_RXCTRL, regval);
 

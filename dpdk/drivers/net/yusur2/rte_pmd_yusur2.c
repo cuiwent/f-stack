@@ -5,77 +5,8 @@
 #include <rte_ethdev_driver.h>
 
 #include "base/yusur2_api.h"
-#include "base/yusur2_x550.h"
 #include "yusur2_ethdev.h"
 #include "rte_pmd_yusur2.h"
-
-int
-rte_pmd_yusur2_set_vf_mac_addr(uint16_t port, uint16_t vf,
-			      struct rte_ether_addr *mac_addr)
-{
-	struct yusur2_hw *hw;
-	struct yusur2_vf_info *vfinfo;
-	int rar_entry;
-	uint8_t *new_mac = (uint8_t *)(mac_addr);
-	struct rte_eth_dev *dev;
-	struct rte_pci_device *pci_dev;
-
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
-
-	dev = &rte_eth_devices[port];
-	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-
-	if (!is_yusur2_supported(dev))
-		return -ENOTSUP;
-
-	if (vf >= pci_dev->max_vfs)
-		return -EINVAL;
-
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	vfinfo = *(YUSUR2_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private));
-	rar_entry = hw->mac.num_rar_entries - (vf + 1);
-
-	if (rte_is_valid_assigned_ether_addr(
-			(struct rte_ether_addr *)new_mac)) {
-		rte_memcpy(vfinfo[vf].vf_mac_addresses, new_mac,
-			   RTE_ETHER_ADDR_LEN);
-		return hw->mac.ops.set_rar(hw, rar_entry, new_mac, vf,
-					   YUSUR2_RAH_AV);
-	}
-	return -EINVAL;
-}
-
-int
-rte_pmd_yusur2_ping_vf(uint16_t port, uint16_t vf)
-{
-	struct yusur2_hw *hw;
-	struct yusur2_vf_info *vfinfo;
-	struct rte_eth_dev *dev;
-	struct rte_pci_device *pci_dev;
-	uint32_t ctrl;
-
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
-
-	dev = &rte_eth_devices[port];
-	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-
-	if (!is_yusur2_supported(dev))
-		return -ENOTSUP;
-
-	if (vf >= pci_dev->max_vfs)
-		return -EINVAL;
-
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	vfinfo = *(YUSUR2_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private));
-
-	ctrl = YUSUR2_PF_CONTROL_MSG;
-	if (vfinfo[vf].clear_to_send)
-		ctrl |= YUSUR2_VT_MSGTYPE_CTS;
-
-	yusur2_write_mbx(hw, &ctrl, 1, vf);
-
-	return 0;
-}
 
 int
 rte_pmd_yusur2_set_vf_vlan_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
@@ -263,100 +194,6 @@ rte_pmd_yusur2_set_vf_split_drop_en(uint16_t port, uint16_t vf, uint8_t on)
 		reg_value &= ~YUSUR2_SRRCTL_DROP_EN;
 
 	YUSUR2_WRITE_REG(hw, YUSUR2_SRRCTL(vf), reg_value);
-
-	return 0;
-}
-
-int
-rte_pmd_yusur2_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on)
-{
-	struct rte_eth_dev *dev;
-	struct rte_pci_device *pci_dev;
-	struct yusur2_hw *hw;
-	uint16_t queues_per_pool;
-	uint32_t q;
-
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
-
-	dev = &rte_eth_devices[port];
-	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	if (!is_yusur2_supported(dev))
-		return -ENOTSUP;
-
-	if (vf >= pci_dev->max_vfs)
-		return -EINVAL;
-
-	if (on > 1)
-		return -EINVAL;
-
-	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->vlan_strip_queue_set, -ENOTSUP);
-
-	/* The PF has 128 queue pairs and in SRIOV configuration
-	 * those queues will be assigned to VF's, so RXDCTL
-	 * registers will be dealing with queues which will be
-	 * assigned to VF's.
-	 * Let's say we have SRIOV configured with 31 VF's then the
-	 * first 124 queues 0-123 will be allocated to VF's and only
-	 * the last 4 queues 123-127 will be assigned to the PF.
-	 */
-	if (hw->mac.type == yusur2_mac_82598EB)
-		queues_per_pool = (uint16_t)hw->mac.max_rx_queues /
-				  ETH_16_POOLS;
-	else
-		queues_per_pool = (uint16_t)hw->mac.max_rx_queues /
-				  ETH_64_POOLS;
-
-	for (q = 0; q < queues_per_pool; q++)
-		(*dev->dev_ops->vlan_strip_queue_set)(dev,
-				q + vf * queues_per_pool, on);
-	return 0;
-}
-
-int
-rte_pmd_yusur2_set_vf_rxmode(uint16_t port, uint16_t vf,
-			    uint16_t rx_mask, uint8_t on)
-{
-	int val = 0;
-	struct rte_eth_dev *dev;
-	struct rte_pci_device *pci_dev;
-	struct yusur2_hw *hw;
-	uint32_t vmolr;
-
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
-
-	dev = &rte_eth_devices[port];
-	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-
-	if (!is_yusur2_supported(dev))
-		return -ENOTSUP;
-
-	if (vf >= pci_dev->max_vfs)
-		return -EINVAL;
-
-	if (on > 1)
-		return -EINVAL;
-
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	vmolr = YUSUR2_READ_REG(hw, YUSUR2_VMOLR(vf));
-
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		PMD_INIT_LOG(ERR, "setting VF receive mode set should be done"
-			     " on 82599 hardware and newer");
-		return -ENOTSUP;
-	}
-	if (yusur2_vt_check(hw) < 0)
-		return -ENOTSUP;
-
-	val = yusur2_convert_vm_rx_mask_to_val(rx_mask, val);
-
-	if (on)
-		vmolr |= val;
-	else
-		vmolr &= ~val;
-
-	YUSUR2_WRITE_REG(hw, YUSUR2_VMOLR(vf), vmolr);
 
 	return 0;
 }
@@ -706,79 +543,6 @@ rte_pmd_yusur2_macsec_select_rxsa(uint16_t port, uint8_t idx, uint8_t an,
 }
 
 int
-rte_pmd_yusur2_set_tc_bw_alloc(uint16_t port,
-			      uint8_t tc_num,
-			      uint8_t *bw_weight)
-{
-	struct rte_eth_dev *dev;
-	struct yusur2_dcb_config *dcb_config;
-	struct yusur2_dcb_tc_config *tc;
-	struct rte_eth_conf *eth_conf;
-	struct yusur2_bw_conf *bw_conf;
-	uint8_t i;
-	uint8_t nb_tcs;
-	uint16_t sum;
-
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
-
-	dev = &rte_eth_devices[port];
-
-	if (!is_yusur2_supported(dev))
-		return -ENOTSUP;
-
-	if (tc_num > YUSUR2_DCB_MAX_TRAFFIC_CLASS) {
-		PMD_DRV_LOG(ERR, "TCs should be no more than %d.",
-			    YUSUR2_DCB_MAX_TRAFFIC_CLASS);
-		return -EINVAL;
-	}
-
-	dcb_config = YUSUR2_DEV_PRIVATE_TO_DCB_CFG(dev->data->dev_private);
-	bw_conf = YUSUR2_DEV_PRIVATE_TO_BW_CONF(dev->data->dev_private);
-	eth_conf = &dev->data->dev_conf;
-
-	if (eth_conf->txmode.mq_mode == ETH_MQ_TX_DCB) {
-		nb_tcs = eth_conf->tx_adv_conf.dcb_tx_conf.nb_tcs;
-	} else if (eth_conf->txmode.mq_mode == ETH_MQ_TX_VMDQ_DCB) {
-		if (eth_conf->tx_adv_conf.vmdq_dcb_tx_conf.nb_queue_pools ==
-		    ETH_32_POOLS)
-			nb_tcs = ETH_4_TCS;
-		else
-			nb_tcs = ETH_8_TCS;
-	} else {
-		nb_tcs = 1;
-	}
-
-	if (nb_tcs != tc_num) {
-		PMD_DRV_LOG(ERR,
-			    "Weight should be set for all %d enabled TCs.",
-			    nb_tcs);
-		return -EINVAL;
-	}
-
-	sum = 0;
-	for (i = 0; i < nb_tcs; i++)
-		sum += bw_weight[i];
-	if (sum != 100) {
-		PMD_DRV_LOG(ERR,
-			    "The summary of the TC weight should be 100.");
-		return -EINVAL;
-	}
-
-	for (i = 0; i < nb_tcs; i++) {
-		tc = &dcb_config->tc_config[i];
-		tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent = bw_weight[i];
-	}
-	for (; i < YUSUR2_DCB_MAX_TRAFFIC_CLASS; i++) {
-		tc = &dcb_config->tc_config[i];
-		tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent = 0;
-	}
-
-	bw_conf->tc_num = nb_tcs;
-
-	return 0;
-}
-
-int
 rte_pmd_yusur2_upd_fctrl_sbp(uint16_t port, int enable)
 {
 	struct yusur2_hw *hw;
@@ -950,6 +714,8 @@ STATIC s32 rte_pmd_yusur2_acquire_swfw(struct yusur2_hw *hw, u32 mask)
 {
 	int retries = FW_PHY_TOKEN_RETRIES;
 	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 
 	while (--retries) {
 		status = yusur2_acquire_swfw_semaphore(hw, mask);
@@ -976,6 +742,7 @@ STATIC s32 rte_pmd_yusur2_acquire_swfw(struct yusur2_hw *hw, u32 mask)
 	}
 	PMD_DRV_LOG(ERR, "swfw acquisition retries failed!: PHY ID = 0x%08X\n",
 		    hw->phy.id);
+#endif
 	return status;
 }
 
@@ -988,8 +755,11 @@ STATIC s32 rte_pmd_yusur2_acquire_swfw(struct yusur2_hw *hw, u32 mask)
  */
 STATIC void rte_pmd_yusur2_release_swfw(struct yusur2_hw *hw, u32 mask)
 {
+//TODO:
+#if 0
 	yusur2_put_phy_token(hw);
 	yusur2_release_swfw_semaphore(hw, mask);
+#endif
 }
 
 int

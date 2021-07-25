@@ -1,0 +1,532 @@
+No .config in build directory
+make[1]: *** [/root/work/f-stack/dpdk/mk/rte.sdkconfig.mk:134: checkconfig] Error 1
+make: *** [/root/work/f-stack/dpdk/mk/rte.sdkroot.mk:98: y] Error 2
+make: *** Waiting for unfinished jobs....
+Configuration done using x86_64-native-linuxapp-gcc
+== Build lib
+== Build lib/librte_kvargs
+== Build lib/librte_eal
+/root/work/f-stack/dpdk/mk/toolchain/gcc/rte.toolchain-compat.mk:30: AVX512 support disabled because of binutils 2.30. See Bug 97
+== Build lib/librte_eal/common
+== Build lib/librte_eal/linux
+== Build lib/librte_eal/linux/eal
+== Build lib/librte_pci
+== Build lib/librte_ring
+== Build lib/librte_stack
+== Build lib/librte_timer
+== Build lib/librte_cfgfile
+== Build lib/librte_meter
+== Build lib/librte_acl
+== Build lib/librte_jobstats
+== Build lib/librte_metrics
+== Build lib/librte_rcu
+== Build lib/librte_mempool
+== Build lib/librte_hash
+== Build lib/librte_power
+== Build lib/librte_efd
+== Build lib/librte_lpm
+== Build lib/librte_member
+== Build lib/librte_mbuf
+== Build lib/librte_rib
+== Build lib/librte_net
+== Build lib/librte_bbdev
+== Build lib/librte_cryptodev
+== Build lib/librte_compressdev
+== Build lib/librte_reorder
+== Build lib/librte_fib
+== Build lib/librte_cmdline
+== Build lib/librte_ethdev
+== Build lib/librte_sched
+== Build lib/librte_security
+== Build lib/librte_eventdev
+== Build lib/librte_rawdev
+== Build lib/librte_vhost
+== Build lib/librte_ip_frag
+== Build lib/librte_gro
+== Build lib/librte_bitratestats
+== Build lib/librte_latencystats
+== Build lib/librte_kni
+== Build lib/librte_distributor
+== Build lib/librte_pdump
+== Build lib/librte_gso
+== Build lib/librte_bpf
+== Build lib/librte_ipsec
+== Build lib/librte_port
+== Build lib/librte_table
+== Build lib/librte_flow_classify
+== Build lib/librte_pipeline
+== Build buildtools
+== Build kernel
+== Build buildtools/pmdinfogen
+== Build kernel/linux
+== Build kernel/linux/igb_uio
+== Build kernel/linux/kni
+== Build drivers
+== Build drivers/common
+== Build drivers/common/cpt
+== Build drivers/common/octeontx
+== Build drivers/common/octeontx2
+== Build drivers/common/dpaax
+== Build drivers/bus
+== Build drivers/bus/dpaa
+== Build drivers/bus/fslmc
+== Build drivers/bus/ifpga
+== Build drivers/bus/pci
+== Build drivers/bus/vdev
+== Build drivers/bus/vmbus
+== Build drivers/mempool
+  Building modules, stage 2.
+  Building modules, stage 2.
+== Build drivers/mempool/bucket
+== Build drivers/mempool/dpaa
+== Build drivers/mempool/dpaa2
+== Build drivers/mempool/ring
+== Build drivers/mempool/stack
+== Build drivers/mempool/octeontx
+  MODPOST 1 modules
+  MODPOST 1 modules
+== Build drivers/mempool/octeontx2
+== Build drivers/net
+== Build drivers/baseband
+== Build drivers/crypto
+== Build drivers/common/qat
+== Build drivers/compress
+== Build drivers/net/af_packet
+== Build drivers/net/ark
+== Build drivers/crypto/octeontx
+== Build drivers/net/atlantic
+== Build drivers/crypto/octeontx2
+== Build drivers/compress/octeontx
+== Build drivers/baseband/null
+== Build drivers/crypto/scheduler
+== Build drivers/net/avp
+== Build drivers/crypto/null
+== Build drivers/net/axgbe
+== Build drivers/net/bonding
+== Build drivers/crypto/dpaa2_sec
+== Build drivers/baseband/turbo_sw
+== Build drivers/baseband/fpga_lte_fec
+== Build drivers/crypto/dpaa_sec
+== Build drivers/net/cxgbe
+== Build drivers/crypto/caam_jr
+== Build drivers/crypto/virtio
+== Build drivers/net/dpaa
+== Build drivers/net/dpaa2
+== Build drivers/net/e1000
+== Build drivers/net/ena
+== Build drivers/crypto/nitrox
+== Build drivers/net/enetc
+== Build drivers/net/enic
+== Build drivers/net/failsafe
+== Build drivers/net/fm10k
+== Build drivers/net/hinic
+== Build drivers/net/hns3
+== Build drivers/net/i40e
+== Build drivers/net/iavf
+== Build drivers/net/ice
+== Build drivers/net/ixgbe
+== Build drivers/net/liquidio
+== Build drivers/net/memif
+== Build drivers/net/netvsc
+== Build drivers/net/nfp
+== Build drivers/net/bnxt
+== Build drivers/net/null
+== Build drivers/net/octeontx
+== Build drivers/net/octeontx2
+== Build drivers/net/qede
+== Build drivers/net/ring
+== Build drivers/net/sfc
+== Build drivers/net/tap
+== Build drivers/net/thunderx
+== Build drivers/net/vdev_netvsc
+== Build drivers/net/virtio
+== Build drivers/net/vmxnet3
+== Build drivers/net/yusur2
+== Build drivers/net/kni
+== Build drivers/net/softnic
+== Build drivers/net/vhost
+== Build drivers/net/ifc
+  CC rte_pmd_yusur2.o
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c: In function 'rte_pmd_yusur2_acquire_swfw':
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c:715:6: warning: unused variable 'retries' [-Wunused-variable]
+  int retries = FW_PHY_TOKEN_RETRIES;
+      ^~~~~~~
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c:713:58: warning: unused parameter 'hw' [-Wunused-parameter]
+ STATIC s32 rte_pmd_yusur2_acquire_swfw(struct yusur2_hw *hw, u32 mask)
+                                        ~~~~~~~~~~~~~~~~~~^~
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c:713:66: warning: unused parameter 'mask' [-Wunused-parameter]
+ STATIC s32 rte_pmd_yusur2_acquire_swfw(struct yusur2_hw *hw, u32 mask)
+                                                              ~~~~^~~~
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c: In function 'rte_pmd_yusur2_release_swfw':
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c:756:59: warning: unused parameter 'hw' [-Wunused-parameter]
+ STATIC void rte_pmd_yusur2_release_swfw(struct yusur2_hw *hw, u32 mask)
+                                         ~~~~~~~~~~~~~~~~~~^~
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c:756:67: warning: unused parameter 'mask' [-Wunused-parameter]
+ STATIC void rte_pmd_yusur2_release_swfw(struct yusur2_hw *hw, u32 mask)
+                                                               ~~~~^~~~
+/root/work/f-stack/dpdk/drivers/net/yusur2/rte_pmd_yusur2.c: At top level:
+cc1: warning: unrecognized command line option '-Wno-address-of-packed-member'
+  AR librte_pmd_yusur2.a
+  INSTALL-LIB librte_pmd_yusur2.a
+== Build drivers/event
+== Build drivers/event/skeleton
+== Build drivers/event/sw
+== Build drivers/event/dsw
+== Build drivers/event/octeontx
+== Build drivers/event/octeontx2
+== Build drivers/event/dpaa
+== Build drivers/event/dpaa2
+== Build drivers/event/opdl
+== Build drivers/raw
+== Build drivers/raw/skeleton
+== Build drivers/raw/dpaa2_cmdif
+== Build drivers/raw/dpaa2_qdma
+== Build drivers/raw/ioat
+== Build drivers/raw/ntb
+== Build drivers/raw/octeontx2_dma
+== Build app
+== Build app/test
+== Build app/test-pmd
+== Build app/proc-info
+== Build app/pdump
+== Build app/test-acl
+== Build app/test-cmdline
+== Build app/test-pipeline
+== Build app/test-sad
+  LD dpdk-procinfo
+  LD dpdk-pdump
+  LD cmdline_test
+  LD testsad
+  LD testpmd
+  LD testacl
+  LD testpipeline
+  INSTALL-APP dpdk-procinfo
+  INSTALL-MAP dpdk-procinfo.map
+  INSTALL-APP cmdline_test
+  INSTALL-MAP cmdline_test.map
+== Build app/test-bbdev
+  INSTALL-APP testpmd
+== Build app/test-compress-perf
+  INSTALL-MAP testpmd.map
+== Build app/test-crypto-perf
+  INSTALL-APP dpdk-pdump
+  INSTALL-MAP dpdk-pdump.map
+== Build app/test-eventdev
+  INSTALL-APP testsad
+  INSTALL-MAP testsad.map
+  INSTALL-APP testacl
+  INSTALL-MAP testacl.map
+  LD test
+  INSTALL-APP testpipeline
+  INSTALL-MAP testpipeline.map
+  CC main.o
+  CC main.o
+  CC cperf_ops.o
+  CC test_bbdev.o
+  CC cperf_options_parsing.o
+  INSTALL-APP test
+  INSTALL-MAP test.map
+  CC test_bbdev_perf.o
+  CC cperf_test_vectors.o
+  CC test_bbdev_vector.o
+  CC evt_main.o
+  CC main.o
+  CC cperf_test_throughput.o
+  CC cperf_test_latency.o
+  CC cperf_test_pmd_cyclecount.o
+  CC cperf_test_verify.o
+  CC cperf_test_vector_parsing.o
+  CC evt_options.o
+  CC comp_perf_options_parse.o
+  CC cperf_test_common.o
+  CC comp_perf_test_verify.o
+  CC comp_perf_test_benchmark.o
+  CC comp_perf_test_common.o
+  CC evt_test.o
+  LD dpdk-test-crypto-perf
+  CC parser.o
+  CC test_order_common.o
+  CC test_order_queue.o
+  CC test_order_atq.o
+  INSTALL-APP dpdk-test-crypto-perf
+  INSTALL-MAP dpdk-test-crypto-perf.map
+  CC test_perf_common.o
+  CC test_perf_queue.o
+  CC test_perf_atq.o
+  CC test_pipeline_common.o
+  CC test_pipeline_queue.o
+  LD dpdk-test-compress-perf
+  CC test_pipeline_atq.o
+  INSTALL-APP dpdk-test-compress-perf
+  INSTALL-MAP dpdk-test-compress-perf.map
+  LD dpdk-test-eventdev
+  LD testbbdev
+  INSTALL-APP dpdk-test-eventdev
+  INSTALL-MAP dpdk-test-eventdev.map
+  INSTALL-APP testbbdev
+  INSTALL-MAP testbbdev.map
+Build complete [x86_64-native-linuxapp-gcc]
+================== Installing dpdk-install/
+tar: Current 'cpu_layout.py' is newer or same age
+tar: Current 'dpdk-devbind.py' is newer or same age
+tar: Current 'dpdk-pmdinfo.py' is newer or same age
+tar: Current 'dpdk-setup.sh' is newer or same age
+tar: Current 'dpdk-telemetry-client.py' is newer or same age
+tar: Current 'rte_kvargs.h' is newer or same age
+tar: Current 'rte_common.h' is newer or same age
+tar: Current 'rte_branch_prediction.h' is newer or same age
+tar: Current 'rte_function_versioning.h' is newer or same age
+tar: Current 'rte_compat.h' is newer or same age
+tar: Current 'rte_debug.h' is newer or same age
+tar: Current 'rte_eal.h' is newer or same age
+tar: Current 'rte_eal_interrupts.h' is newer or same age
+tar: Current 'rte_errno.h' is newer or same age
+tar: Current 'rte_launch.h' is newer or same age
+tar: Current 'rte_log.h' is newer or same age
+tar: Current 'rte_lcore.h' is newer or same age
+tar: Current 'rte_memory.h' is newer or same age
+tar: Current 'rte_per_lcore.h' is newer or same age
+tar: Current 'rte_memzone.h' is newer or same age
+tar: Current 'rte_random.h' is newer or same age
+tar: Current 'rte_tailq.h' is newer or same age
+tar: Current 'rte_interrupts.h' is newer or same age
+tar: Current 'rte_alarm.h' is newer or same age
+tar: Current 'rte_string_fns.h' is newer or same age
+tar: Current 'rte_eal_memconfig.h' is newer or same age
+tar: Current 'rte_version.h' is newer or same age
+tar: Current 'rte_hexdump.h' is newer or same age
+tar: Current 'rte_devargs.h' is newer or same age
+tar: Current 'rte_bus.h' is newer or same age
+tar: Current 'rte_dev.h' is newer or same age
+tar: Current 'rte_pci_dev_features.h' is newer or same age
+tar: Current 'rte_class.h' is newer or same age
+tar: Current 'rte_option.h' is newer or same age
+tar: Current 'rte_malloc.h' is newer or same age
+tar: Current 'rte_pci_dev_feature_defs.h' is newer or same age
+tar: Current 'rte_keepalive.h' is newer or same age
+tar: Current 'rte_service.h' is newer or same age
+tar: Current 'rte_time.h' is newer or same age
+tar: Current 'rte_service_component.h' is newer or same age
+tar: Current 'rte_bitmap.h' is newer or same age
+tar: Current 'rte_vfio.h' is newer or same age
+tar: Current 'rte_hypervisor.h' is newer or same age
+tar: Current 'rte_test.h' is newer or same age
+tar: Current 'rte_reciprocal.h' is newer or same age
+tar: Current 'rte_uuid.h' is newer or same age
+tar: Current 'rte_fbarray.h' is newer or same age
+tar: Current 'rte_atomic.h' is newer or same age
+tar: Current 'rte_atomic_32.h' is newer or same age
+tar: Current 'rte_atomic_64.h' is newer or same age
+tar: Current 'rte_byteorder.h' is newer or same age
+tar: Current 'rte_byteorder_64.h' is newer or same age
+tar: Current 'rte_byteorder_32.h' is newer or same age
+tar: Current 'rte_cpuflags.h' is newer or same age
+tar: Current 'rte_io.h' is newer or same age
+tar: Current 'rte_cycles.h' is newer or same age
+tar: Current 'rte_mcslock.h' is newer or same age
+tar: Current 'rte_memcpy.h' is newer or same age
+tar: Current 'rte_pause.h' is newer or same age
+tar: Current 'rte_prefetch.h' is newer or same age
+tar: Current 'rte_rtm.h' is newer or same age
+tar: Current 'rte_rwlock.h' is newer or same age
+tar: Current 'rte_spinlock.h' is newer or same age
+tar: Current 'generic/rte_atomic.h' is newer or same age
+tar: Current 'generic/rte_byteorder.h' is newer or same age
+tar: Current 'generic/rte_cycles.h' is newer or same age
+tar: Current 'generic/rte_prefetch.h' is newer or same age
+tar: Current 'generic/rte_memcpy.h' is newer or same age
+tar: Current 'generic/rte_cpuflags.h' is newer or same age
+tar: Current 'generic/rte_mcslock.h' is newer or same age
+tar: Current 'generic/rte_spinlock.h' is newer or same age
+tar: Current 'generic/rte_rwlock.h' is newer or same age
+tar: Current 'generic/rte_ticketlock.h' is newer or same age
+tar: Current 'generic/rte_vect.h' is newer or same age
+tar: Current 'generic/rte_pause.h' is newer or same age
+tar: Current 'generic/rte_io.h' is newer or same age
+tar: Current 'rte_ticketlock.h' is newer or same age
+tar: Current 'rte_vect.h' is newer or same age
+tar: Current 'rte_kni_common.h' is newer or same age
+tar: Current 'rte_os.h' is newer or same age
+tar: Current 'rte_jobstats.h' is newer or same age
+tar: Current 'rte_cfgfile.h' is newer or same age
+tar: Current 'rte_pci.h' is newer or same age
+tar: Current 'rte_acl_osdep.h' is newer or same age
+tar: Current 'rte_ring.h' is newer or same age
+tar: Current 'rte_ring_generic.h' is newer or same age
+tar: Current 'rte_timer.h' is newer or same age
+tar: Current 'rte_acl.h' is newer or same age
+tar: Current 'rte_meter.h' is newer or same age
+tar: Current 'rte_stack.h' is newer or same age
+tar: Current 'rte_ring_c11_mem.h' is newer or same age
+tar: Current 'rte_stack_std.h' is newer or same age
+tar: Current 'rte_stack_lf.h' is newer or same age
+tar: Current 'rte_stack_lf_generic.h' is newer or same age
+tar: Current 'rte_stack_lf_c11.h' is newer or same age
+tar: Current 'rte_stack_lf_stubs.h' is newer or same age
+tar: Current 'rte_rcu_qsbr.h' is newer or same age
+tar: Current 'rte_metrics.h' is newer or same age
+tar: Current 'rte_mempool.h' is newer or same age
+tar: Current 'rte_hash.h' is newer or same age
+tar: Current 'rte_hash_crc.h' is newer or same age
+tar: Current 'rte_jhash.h' is newer or same age
+tar: Current 'rte_thash.h' is newer or same age
+tar: Current 'rte_fbk_hash.h' is newer or same age
+tar: Current 'rte_power.h' is newer or same age
+tar: Current 'rte_power_empty_poll.h' is newer or same age
+tar: Current 'rte_mbuf_core.h' is newer or same age
+tar: Current 'rte_mbuf.h' is newer or same age
+tar: Current 'rte_mbuf_ptype.h' is newer or same age
+tar: Current 'rte_mbuf_dyn.h' is newer or same age
+tar: Current 'rte_mbuf_pool_ops.h' is newer or same age
+tar: Current 'rte_rib.h' is newer or same age
+tar: Current 'rte_rib6.h' is newer or same age
+tar: Current 'rte_lpm.h' is newer or same age
+tar: Current 'rte_lpm6.h' is newer or same age
+tar: Current 'rte_lpm_sse.h' is newer or same age
+tar: Current 'rte_efd.h' is newer or same age
+tar: Current 'rte_member.h' is newer or same age
+tar: Current 'rte_bbdev_op.h' is newer or same age
+tar: Current 'rte_bbdev.h' is newer or same age
+tar: Current 'rte_crypto.h' is newer or same age
+tar: Current 'rte_bbdev_pmd.h' is newer or same age
+tar: Current 'rte_crypto_sym.h' is newer or same age
+tar: Current 'rte_ip.h' is newer or same age
+tar: Current 'rte_cryptodev.h' is newer or same age
+tar: Current 'rte_tcp.h' is newer or same age
+tar: Current 'rte_cryptodev_pmd.h' is newer or same age
+tar: Current 'rte_crypto_asym.h' is newer or same age
+tar: Current 'rte_udp.h' is newer or same age
+tar: Current 'rte_esp.h' is newer or same age
+tar: Current 'rte_comp.h' is newer or same age
+tar: Current 'rte_sctp.h' is newer or same age
+tar: Current 'rte_reorder.h' is newer or same age
+tar: Current 'rte_compressdev.h' is newer or same age
+tar: Current 'rte_icmp.h' is newer or same age
+tar: Current 'rte_compressdev_pmd.h' is newer or same age
+tar: Current 'rte_arp.h' is newer or same age
+tar: Current 'rte_compressdev_internal.h' is newer or same age
+tar: Current 'rte_ether.h' is newer or same age
+tar: Current 'rte_gre.h' is newer or same age
+tar: Current 'rte_net.h' is newer or same age
+tar: Current 'rte_net_crc.h' is newer or same age
+tar: Current 'rte_mpls.h' is newer or same age
+tar: Current 'rte_higig.h' is newer or same age
+tar: Current 'rte_gtp.h' is newer or same age
+tar: Current 'rte_vxlan.h' is newer or same age
+tar: Current 'rte_fib.h' is newer or same age
+tar: Current 'rte_fib6.h' is newer or same age
+tar: Current 'cmdline_parse_num.h' is newer or same age
+tar: Current 'cmdline.h' is newer or same age
+tar: Current 'cmdline_parse.h' is newer or same age
+tar: Current 'cmdline_parse_ipaddr.h' is newer or same age
+tar: Current 'cmdline_parse_etheraddr.h' is newer or same age
+tar: Current 'cmdline_rdline.h' is newer or same age
+tar: Current 'cmdline_parse_string.h' is newer or same age
+tar: Current 'rte_ethdev.h' is newer or same age
+tar: Current 'cmdline_vt100.h' is newer or same age
+tar: Current 'cmdline_socket.h' is newer or same age
+tar: Current 'cmdline_cirbuf.h' is newer or same age
+tar: Current 'cmdline_parse_portlist.h' is newer or same age
+tar: Current 'rte_ethdev_driver.h' is newer or same age
+tar: Current 'rte_ethdev_core.h' is newer or same age
+tar: Current 'rte_ethdev_pci.h' is newer or same age
+tar: Current 'rte_ethdev_vdev.h' is newer or same age
+tar: Current 'rte_eth_ctrl.h' is newer or same age
+tar: Current 'rte_dev_info.h' is newer or same age
+tar: Current 'rte_flow.h' is newer or same age
+tar: Current 'rte_flow_driver.h' is newer or same age
+tar: Current 'rte_tm.h' is newer or same age
+tar: Current 'rte_sched.h' is newer or same age
+tar: Current 'rte_tm_driver.h' is newer or same age
+tar: Current 'rte_sched_common.h' is newer or same age
+tar: Current 'rte_red.h' is newer or same age
+tar: Current 'rte_mtr.h' is newer or same age
+tar: Current 'rte_approx.h' is newer or same age
+tar: Current 'rte_mtr_driver.h' is newer or same age
+tar: Current 'rte_security.h' is newer or same age
+tar: Current 'rte_latencystats.h' is newer or same age
+tar: Current 'rte_security_driver.h' is newer or same age
+tar: Current 'rte_rawdev.h' is newer or same age
+tar: Current 'rte_ip_frag.h' is newer or same age
+tar: Current 'rte_eventdev.h' is newer or same age
+tar: Current 'rte_rawdev_pmd.h' is newer or same age
+tar: Current 'rte_gro.h' is newer or same age
+tar: Current 'rte_vhost.h' is newer or same age
+tar: Current 'rte_eventdev_pmd.h' is newer or same age
+tar: Current 'rte_bitrate.h' is newer or same age
+tar: Current 'rte_vdpa.h' is newer or same age
+tar: Current 'rte_eventdev_pmd_pci.h' is newer or same age
+tar: Current 'rte_vhost_crypto.h' is newer or same age
+tar: Current 'rte_eventdev_pmd_vdev.h' is newer or same age
+tar: Current 'rte_event_ring.h' is newer or same age
+tar: Current 'rte_event_eth_rx_adapter.h' is newer or same age
+tar: Current 'rte_event_timer_adapter.h' is newer or same age
+tar: Current 'rte_event_timer_adapter_pmd.h' is newer or same age
+tar: Current 'rte_event_crypto_adapter.h' is newer or same age
+tar: Current 'rte_event_eth_tx_adapter.h' is newer or same age
+tar: Current 'rte_kni.h' is newer or same age
+tar: Current 'rte_distributor.h' is newer or same age
+tar: Current 'rte_pdump.h' is newer or same age
+tar: Current 'rte_gso.h' is newer or same age
+tar: Current 'bpf_def.h' is newer or same age
+tar: Current 'rte_bpf.h' is newer or same age
+tar: Current 'rte_bpf_ethdev.h' is newer or same age
+tar: Current 'rte_ipsec.h' is newer or same age
+tar: Current 'rte_ipsec_group.h' is newer or same age
+tar: Current 'rte_ipsec_sa.h' is newer or same age
+tar: Current 'rte_ipsec_sad.h' is newer or same age
+tar: Current 'rte_port_ethdev.h' is newer or same age
+tar: Current 'rte_port.h' is newer or same age
+tar: Current 'rte_port_ring.h' is newer or same age
+tar: Current 'rte_port_ras.h' is newer or same age
+tar: Current 'rte_port_frag.h' is newer or same age
+tar: Current 'rte_port_sched.h' is newer or same age
+tar: Current 'rte_port_fd.h' is newer or same age
+tar: Current 'rte_port_kni.h' is newer or same age
+tar: Current 'rte_port_source_sink.h' is newer or same age
+tar: Current 'rte_port_sym_crypto.h' is newer or same age
+tar: Current 'rte_port_eventdev.h' is newer or same age
+tar: Current 'rte_table.h' is newer or same age
+tar: Current 'rte_table_lpm.h' is newer or same age
+tar: Current 'rte_table_lpm_ipv6.h' is newer or same age
+tar: Current 'rte_table_acl.h' is newer or same age
+tar: Current 'rte_table_hash.h' is newer or same age
+tar: Current 'rte_table_hash_cuckoo.h' is newer or same age
+tar: Current 'rte_table_hash_func.h' is newer or same age
+tar: Current 'rte_table_hash_func_arm64.h' is newer or same age
+tar: Current 'rte_lru.h' is newer or same age
+tar: Current 'rte_lru_x86.h' is newer or same age
+tar: Current 'rte_table_stub.h' is newer or same age
+tar: Current 'rte_table_array.h' is newer or same age
+tar: Current 'rte_flow_classify.h' is newer or same age
+tar: Current 'rte_pipeline.h' is newer or same age
+tar: Current 'rte_port_in_action.h' is newer or same age
+tar: Current 'rte_table_action.h' is newer or same age
+tar: Current 'rte_bus_ifpga.h' is newer or same age
+tar: Current 'rte_bus_pci.h' is newer or same age
+tar: Current 'rte_bus_vdev.h' is newer or same age
+tar: Current 'rte_bus_vmbus.h' is newer or same age
+tar: Current 'rte_vmbus_reg.h' is newer or same age
+tar: Current 'rte_dpaa2_mempool.h' is newer or same age
+tar: Current 'rte_cryptodev_scheduler_operations.h' is newer or same age
+tar: Current 'rte_cryptodev_scheduler.h' is newer or same age
+tar: Current 'fpga_lte_fec.h' is newer or same age
+tar: Current 'rte_avp_common.h' is newer or same age
+tar: Current 'rte_avp_fifo.h' is newer or same age
+tar: Current 'rte_eth_bond.h' is newer or same age
+tar: Current 'rte_eth_bond_8023ad.h' is newer or same age
+tar: Current 'rte_pmd_dpaa2.h' is newer or same age
+tar: Current 'rte_pmd_dpaa.h' is newer or same age
+tar: Current 'rte_pmd_i40e.h' is newer or same age
+tar: Current 'rte_pmd_ice.h' is newer or same age
+tar: Current 'rte_pmd_ixgbe.h' is newer or same age
+tar: Current 'rte_pmd_bnxt.h' is newer or same age
+tar: Current 'rte_eth_ring.h' is newer or same age
+tar: Current 'rte_eth_softnic.h' is newer or same age
+tar: Current 'rte_eth_vhost.h' is newer or same age
+tar: Current 'rte_pmd_ntb.h' is newer or same age
+tar: Current 'rte_ioat_rawdev.h' is newer or same age
+tar: Current 'rte_ioat_spec.h' is newer or same age
+tar: Current 'rte_pmd_dpaa2_cmdif.h' is newer or same age
+tar: Current 'rte_pmd_dpaa2_qdma.h' is newer or same age
+Installation in dpdk-install/ complete

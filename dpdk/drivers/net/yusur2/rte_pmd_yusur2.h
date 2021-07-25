@@ -16,37 +16,6 @@
 #include <rte_ether.h>
 
 /**
- * Notify VF when PF link status changes.
- *
- * @param port
- *   The port identifier of the Ethernet device.
- * @param vf
- *   VF id.
- * @return
- *   - (0) if successful.
- *   - (-ENODEV) if *port* invalid.
- *   - (-EINVAL) if *vf* invalid.
- */
-int rte_pmd_yusur2_ping_vf(uint16_t port, uint16_t vf);
-
-/**
- * Set the VF MAC address.
- *
- * @param port
- *   The port identifier of the Ethernet device.
- * @param vf
- *   VF id.
- * @param mac_addr
- *   VF MAC address.
- * @return
- *   - (0) if successful.
- *   - (-ENODEV) if *port* invalid.
- *   - (-EINVAL) if *vf* or *mac_addr* is invalid.
- */
-int rte_pmd_yusur2_set_vf_mac_addr(uint16_t port, uint16_t vf,
-		struct rte_ether_addr *mac_addr);
-
-/**
  * Enable/Disable VF VLAN anti spoofing.
  *
  * @param port
@@ -150,26 +119,6 @@ int rte_pmd_yusur2_set_all_queues_drop_en(uint16_t port, uint8_t on);
  */
 
 int rte_pmd_yusur2_set_vf_split_drop_en(uint16_t port, uint16_t vf, uint8_t on);
-
-/**
- * Enable/Disable vf vlan strip for all queues in a pool
- *
- * @param port
- *    The port identifier of the Ethernet device.
- * @param vf
- *    ID specifying VF.
- * @param on
- *    1 - Enable VF's vlan strip on RX queues.
- *    0 - Disable VF's vlan strip on RX queues.
- *
- * @return
- *   - (0) if successful.
- *   - (-ENOTSUP) if hardware doesn't support this feature.
- *   - (-ENODEV) if *port* invalid.
- *   - (-EINVAL) if bad parameter.
- */
-int
-rte_pmd_yusur2_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on);
 
 /**
  * Enable MACsec offload.
@@ -276,32 +225,6 @@ int rte_pmd_yusur2_macsec_select_rxsa(uint16_t port, uint8_t idx, uint8_t an,
 		uint32_t pn, uint8_t *key);
 
 /**
-* Set RX L2 Filtering mode of a VF of an Ethernet device.
-*
-* @param port
-*   The port identifier of the Ethernet device.
-* @param vf
-*   VF id.
-* @param rx_mask
-*    The RX mode mask, which is one or more of accepting Untagged Packets,
-*    packets that match the PFUTA table, Broadcast and Multicast Promiscuous.
-*    ETH_VMDQ_ACCEPT_UNTAG,ETH_VMDQ_ACCEPT_HASH_UC,
-*    ETH_VMDQ_ACCEPT_BROADCAST and ETH_VMDQ_ACCEPT_MULTICAST will be used
-*    in rx_mode.
-* @param on
-*    1 - Enable a VF RX mode.
-*    0 - Disable a VF RX mode.
-* @return
-*   - (0) if successful.
-*   - (-ENOTSUP) if hardware doesn't support.
-*   - (-ENODEV) if *port_id* invalid.
-*   - (-EINVAL) if bad parameter.
-*/
-int
-rte_pmd_yusur2_set_vf_rxmode(uint16_t port, uint16_t vf, uint16_t rx_mask,
-			     uint8_t on);
-
-/**
 * Enable or disable a VF traffic receive of an Ethernet device.
 *
 * @param port
@@ -381,29 +304,6 @@ rte_pmd_yusur2_set_vf_vlan_filter(uint16_t port, uint16_t vlan,
  */
 int rte_pmd_yusur2_set_vf_rate_limit(uint16_t port, uint16_t vf,
 				     uint16_t tx_rate, uint64_t q_msk);
-
-/**
- * Set all the TCs' bandwidth weight.
- *
- * The bw_weight means the percentage occupied by the TC.
- * It can be taken as the relative min bandwidth setting.
- *
- * @param port
- *    The port identifier of the Ethernet device.
- * @param tc_num
- *    Number of TCs.
- * @param bw_weight
- *    An array of relative bandwidth weight for all the TCs.
- *    The summary of the bw_weight should be 100.
- * @return
- *   - (0) if successful.
- *   - (-ENODEV) if *port* invalid.
- *   - (-EINVAL) if bad parameter.
- *   - (-ENOTSUP) not supported by firmware.
- */
-int rte_pmd_yusur2_set_tc_bw_alloc(uint16_t port,
-				  uint8_t tc_num,
-				  uint8_t *bw_weight);
 
 
 /**

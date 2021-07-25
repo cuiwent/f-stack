@@ -44,9 +44,7 @@
 
 #include "yusur2_logs.h"
 #include "base/yusur2_api.h"
-#include "base/yusur2_vf.h"
 #include "yusur2_ethdev.h"
-#include "base/yusur2_dcb.h"
 #include "base/yusur2_common.h"
 #include "yusur2_rxtx.h"
 
@@ -368,126 +366,7 @@ yusur2_set_xmit_ctx(struct yusur2_tx_queue *txq,
 		uint64_t ol_flags, union yusur2_tx_offload tx_offload,
 		__rte_unused uint64_t *mdata)
 {
-	uint32_t type_tucmd_mlhl;
-	uint32_t mss_l4len_idx = 0;
-	uint32_t ctx_idx;
-	uint32_t vlan_macip_lens;
-	union yusur2_tx_offload tx_offload_mask;
-	uint32_t seqnum_seed = 0;
-
-	ctx_idx = txq->ctx_curr;
-	tx_offload_mask.data[0] = 0;
-	tx_offload_mask.data[1] = 0;
-	type_tucmd_mlhl = 0;
-
-	/* Specify which HW CTX to upload. */
-	mss_l4len_idx |= (ctx_idx << YUSUR2_ADVTXD_IDX_SHIFT);
-
-	if (ol_flags & PKT_TX_VLAN_PKT) {
-		tx_offload_mask.vlan_tci |= ~0;
-	}
-
-	/* check if TCP segmentation required for this packet */
-	if (ol_flags & PKT_TX_TCP_SEG) {
-		/* implies IP cksum in IPv4 */
-		if (ol_flags & PKT_TX_IP_CKSUM)
-			type_tucmd_mlhl = YUSUR2_ADVTXD_TUCMD_IPV4 |
-				YUSUR2_ADVTXD_TUCMD_L4T_TCP |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-		else
-			type_tucmd_mlhl = YUSUR2_ADVTXD_TUCMD_IPV6 |
-				YUSUR2_ADVTXD_TUCMD_L4T_TCP |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-
-		tx_offload_mask.l2_len |= ~0;
-		tx_offload_mask.l3_len |= ~0;
-		tx_offload_mask.l4_len |= ~0;
-		tx_offload_mask.tso_segsz |= ~0;
-		mss_l4len_idx |= tx_offload.tso_segsz << YUSUR2_ADVTXD_MSS_SHIFT;
-		mss_l4len_idx |= tx_offload.l4_len << YUSUR2_ADVTXD_L4LEN_SHIFT;
-	} else { /* no TSO, check if hardware checksum is needed */
-		if (ol_flags & PKT_TX_IP_CKSUM) {
-			type_tucmd_mlhl = YUSUR2_ADVTXD_TUCMD_IPV4;
-			tx_offload_mask.l2_len |= ~0;
-			tx_offload_mask.l3_len |= ~0;
-		}
-
-		switch (ol_flags & PKT_TX_L4_MASK) {
-		case PKT_TX_UDP_CKSUM:
-			type_tucmd_mlhl |= YUSUR2_ADVTXD_TUCMD_L4T_UDP |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-			mss_l4len_idx |= sizeof(struct rte_udp_hdr)
-				<< YUSUR2_ADVTXD_L4LEN_SHIFT;
-			tx_offload_mask.l2_len |= ~0;
-			tx_offload_mask.l3_len |= ~0;
-			break;
-		case PKT_TX_TCP_CKSUM:
-			type_tucmd_mlhl |= YUSUR2_ADVTXD_TUCMD_L4T_TCP |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-			mss_l4len_idx |= sizeof(struct rte_tcp_hdr)
-				<< YUSUR2_ADVTXD_L4LEN_SHIFT;
-			tx_offload_mask.l2_len |= ~0;
-			tx_offload_mask.l3_len |= ~0;
-			break;
-		case PKT_TX_SCTP_CKSUM:
-			type_tucmd_mlhl |= YUSUR2_ADVTXD_TUCMD_L4T_SCTP |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-			mss_l4len_idx |= sizeof(struct rte_sctp_hdr)
-				<< YUSUR2_ADVTXD_L4LEN_SHIFT;
-			tx_offload_mask.l2_len |= ~0;
-			tx_offload_mask.l3_len |= ~0;
-			break;
-		default:
-			type_tucmd_mlhl |= YUSUR2_ADVTXD_TUCMD_L4T_RSV |
-				YUSUR2_ADVTXD_DTYP_CTXT | YUSUR2_ADVTXD_DCMD_DEXT;
-			break;
-		}
-	}
-
-	if (ol_flags & PKT_TX_OUTER_IP_CKSUM) {
-		tx_offload_mask.outer_l2_len |= ~0;
-		tx_offload_mask.outer_l3_len |= ~0;
-		tx_offload_mask.l2_len |= ~0;
-		seqnum_seed |= tx_offload.outer_l3_len
-			       << YUSUR2_ADVTXD_OUTER_IPLEN;
-		seqnum_seed |= tx_offload.l2_len
-			       << YUSUR2_ADVTXD_TUNNEL_LEN;
-	}
-#ifdef RTE_LIBRTE_SECURITY
-	if (ol_flags & PKT_TX_SEC_OFFLOAD) {
-		union yusur2_crypto_tx_desc_md *md =
-				(union yusur2_crypto_tx_desc_md *)mdata;
-		seqnum_seed |=
-			(YUSUR2_ADVTXD_IPSEC_SA_INDEX_MASK & md->sa_idx);
-		type_tucmd_mlhl |= md->enc ?
-				(YUSUR2_ADVTXD_TUCMD_IPSEC_TYPE_ESP |
-				YUSUR2_ADVTXD_TUCMD_IPSEC_ENCRYPT_EN) : 0;
-		type_tucmd_mlhl |=
-			(md->pad_len & YUSUR2_ADVTXD_IPSEC_ESP_LEN_MASK);
-		tx_offload_mask.sa_idx |= ~0;
-		tx_offload_mask.sec_pad_len |= ~0;
-	}
-#endif
-
-	txq->ctx_cache[ctx_idx].flags = ol_flags;
-	txq->ctx_cache[ctx_idx].tx_offload.data[0]  =
-		tx_offload_mask.data[0] & tx_offload.data[0];
-	txq->ctx_cache[ctx_idx].tx_offload.data[1]  =
-		tx_offload_mask.data[1] & tx_offload.data[1];
-	txq->ctx_cache[ctx_idx].tx_offload_mask    = tx_offload_mask;
-
-	ctx_txd->type_tucmd_mlhl = rte_cpu_to_le_32(type_tucmd_mlhl);
-	vlan_macip_lens = tx_offload.l3_len;
-	if (ol_flags & PKT_TX_OUTER_IP_CKSUM)
-		vlan_macip_lens |= (tx_offload.outer_l2_len <<
-				    YUSUR2_ADVTXD_MACLEN_SHIFT);
-	else
-		vlan_macip_lens |= (tx_offload.l2_len <<
-				    YUSUR2_ADVTXD_MACLEN_SHIFT);
-	vlan_macip_lens |= ((uint32_t)tx_offload.vlan_tci << YUSUR2_ADVTXD_VLAN_SHIFT);
-	ctx_txd->vlan_macip_lens = rte_cpu_to_le_32(vlan_macip_lens);
-	ctx_txd->mss_l4len_idx   = rte_cpu_to_le_32(mss_l4len_idx);
-	ctx_txd->seqnum_seed     = seqnum_seed;
+	//TODO: check...
 }
 
 /*
@@ -690,15 +569,6 @@ yusur2_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			tx_offload.tso_segsz = tx_pkt->tso_segsz;
 			tx_offload.outer_l2_len = tx_pkt->outer_l2_len;
 			tx_offload.outer_l3_len = tx_pkt->outer_l3_len;
-#ifdef RTE_LIBRTE_SECURITY
-			if (use_ipsec) {
-				union yusur2_crypto_tx_desc_md *ipsec_mdata =
-					(union yusur2_crypto_tx_desc_md *)
-							&tx_pkt->udata64;
-				tx_offload.sa_idx = ipsec_mdata->sa_idx;
-				tx_offload.sec_pad_len = ipsec_mdata->pad_len;
-			}
-#endif
 
 			/* If new context need be built or reuse the exist ctx. */
 			ctx = what_advctx_update(txq, tx_ol_req,
@@ -2429,6 +2299,7 @@ yusur2_get_tx_port_offloads(struct rte_eth_dev *dev)
 	uint64_t tx_offload_capa;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	//TODO: yusur2 offload support...haha
 	tx_offload_capa =
 		DEV_TX_OFFLOAD_VLAN_INSERT |
 		DEV_TX_OFFLOAD_IPV4_CKSUM  |
@@ -2438,19 +2309,6 @@ yusur2_get_tx_port_offloads(struct rte_eth_dev *dev)
 		DEV_TX_OFFLOAD_TCP_TSO     |
 		DEV_TX_OFFLOAD_MULTI_SEGS;
 
-	if (hw->mac.type == yusur2_mac_82599EB ||
-	    hw->mac.type == yusur2_mac_X540)
-		tx_offload_capa |= DEV_TX_OFFLOAD_MACSEC_INSERT;
-
-	if (hw->mac.type == yusur2_mac_X550 ||
-	    hw->mac.type == yusur2_mac_X550EM_x ||
-	    hw->mac.type == yusur2_mac_X550EM_a)
-		tx_offload_capa |= DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM;
-
-#ifdef RTE_LIBRTE_SECURITY
-	if (dev->security_ctx)
-		tx_offload_capa |= DEV_TX_OFFLOAD_SECURITY;
-#endif
 	return tx_offload_capa;
 }
 
@@ -2623,14 +2481,8 @@ yusur2_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	/*
 	 * Modification to set VFTDT for virtual function if vf is detected
 	 */
-	if (hw->mac.type == yusur2_mac_82599_vf ||
-	    hw->mac.type == yusur2_mac_X540_vf ||
-	    hw->mac.type == yusur2_mac_X550_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_x_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_a_vf)
-		txq->tdt_reg_addr = YUSUR2_PCI_REG_ADDR(hw, YUSUR2_VFTDT(queue_idx));
-	else
-		txq->tdt_reg_addr = YUSUR2_PCI_REG_ADDR(hw, YUSUR2_TDT(txq->reg_idx));
+
+	txq->tdt_reg_addr = YUSUR2_PCI_REG_ADDR(hw, YUSUR2_TDT(txq->reg_idx));
 
 	txq->tx_ring_phys_addr = tz->iova;
 	txq->tx_ring = (union yusur2_adv_tx_desc *) tz->addr;
@@ -2834,28 +2686,14 @@ yusur2_reset_rx_queue(struct yusur2_adapter *adapter, struct yusur2_rx_queue *rx
 static int
 yusur2_is_vf(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	switch (hw->mac.type) {
-	case yusur2_mac_82599_vf:
-	case yusur2_mac_X540_vf:
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		return 1;
-	default:
-		return 0;
-	}
+	return 0;
 }
 
 uint64_t
 yusur2_get_rx_queue_offloads(struct rte_eth_dev *dev)
 {
+	//TODO:check...
 	uint64_t offloads = 0;
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	if (hw->mac.type != yusur2_mac_82598EB)
-		offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
 
 	return offloads;
 }
@@ -2863,47 +2701,8 @@ yusur2_get_rx_queue_offloads(struct rte_eth_dev *dev)
 uint64_t
 yusur2_get_rx_port_offloads(struct rte_eth_dev *dev)
 {
+	//TODO:check...
 	uint64_t offloads;
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	offloads = DEV_RX_OFFLOAD_IPV4_CKSUM  |
-		   DEV_RX_OFFLOAD_UDP_CKSUM   |
-		   DEV_RX_OFFLOAD_TCP_CKSUM   |
-		   DEV_RX_OFFLOAD_KEEP_CRC    |
-		   DEV_RX_OFFLOAD_JUMBO_FRAME |
-		   DEV_RX_OFFLOAD_VLAN_FILTER |
-		   DEV_RX_OFFLOAD_SCATTER |
-		   DEV_RX_OFFLOAD_RSS_HASH;
-
-	if (hw->mac.type == yusur2_mac_82598EB)
-		offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
-
-	if (yusur2_is_vf(dev) == 0)
-		offloads |= DEV_RX_OFFLOAD_VLAN_EXTEND;
-
-	/*
-	 * RSC is only supported by 82599 and x540 PF devices in a non-SR-IOV
-	 * mode.
-	 */
-	if ((hw->mac.type == yusur2_mac_82599EB ||
-	     hw->mac.type == yusur2_mac_X540 ||
-	     hw->mac.type == yusur2_mac_X550) &&
-	    !RTE_ETH_DEV_SRIOV(dev).active)
-		offloads |= DEV_RX_OFFLOAD_TCP_LRO;
-
-	if (hw->mac.type == yusur2_mac_82599EB ||
-	    hw->mac.type == yusur2_mac_X540)
-		offloads |= DEV_RX_OFFLOAD_MACSEC_STRIP;
-
-	if (hw->mac.type == yusur2_mac_X550 ||
-	    hw->mac.type == yusur2_mac_X550EM_x ||
-	    hw->mac.type == yusur2_mac_X550EM_a)
-		offloads |= DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM;
-
-#ifdef RTE_LIBRTE_SECURITY
-	if (dev->security_ctx)
-		offloads |= DEV_RX_OFFLOAD_SECURITY;
-#endif
 
 	return offloads;
 }
@@ -2970,15 +2769,7 @@ yusur2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	 * Some bits are used for x550 but reserved for other NICS.
 	 * So set different masks for different NICs.
 	 */
-	if (hw->mac.type == yusur2_mac_X550 ||
-	    hw->mac.type == yusur2_mac_X550EM_x ||
-	    hw->mac.type == yusur2_mac_X550EM_a ||
-	    hw->mac.type == yusur2_mac_X550_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_x_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_a_vf)
-		rxq->pkt_type_mask = YUSUR2_PACKET_TYPE_MASK_X550;
-	else
-		rxq->pkt_type_mask = YUSUR2_PACKET_TYPE_MASK_82599;
+	//TODO:
 
 	/*
 	 * Allocate RX ring hardware descriptors. A memzone large enough to
@@ -3000,21 +2791,13 @@ yusur2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	/*
 	 * Modified to setup VFRDT for Virtual Function
 	 */
-	if (hw->mac.type == yusur2_mac_82599_vf ||
-	    hw->mac.type == yusur2_mac_X540_vf ||
-	    hw->mac.type == yusur2_mac_X550_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_x_vf ||
-	    hw->mac.type == yusur2_mac_X550EM_a_vf) {
-		rxq->rdt_reg_addr =
-			YUSUR2_PCI_REG_ADDR(hw, YUSUR2_VFRDT(queue_idx));
-		rxq->rdh_reg_addr =
-			YUSUR2_PCI_REG_ADDR(hw, YUSUR2_VFRDH(queue_idx));
-	} else {
-		rxq->rdt_reg_addr =
-			YUSUR2_PCI_REG_ADDR(hw, YUSUR2_RDT(rxq->reg_idx));
-		rxq->rdh_reg_addr =
-			YUSUR2_PCI_REG_ADDR(hw, YUSUR2_RDH(rxq->reg_idx));
-	}
+
+	//TODO:
+	// rxq->rdt_reg_addr =
+	// 	YUSUR2_PCI_REG_ADDR(hw, YUSUR2_RDT(rxq->reg_idx));
+	// rxq->rdh_reg_addr =
+	// 	YUSUR2_PCI_REG_ADDR(hw, YUSUR2_RDH(rxq->reg_idx));
+
 
 	rxq->rx_ring_phys_addr = rz->iova;
 	rxq->rx_ring = (union yusur2_adv_rx_desc *) rz->addr;
@@ -3242,14 +3025,6 @@ yusur2_dev_clear_queues(struct rte_eth_dev *dev)
 			yusur2_rx_queue_release_mbufs(rxq);
 			yusur2_reset_rx_queue(adapter, rxq);
 		}
-	}
-	/* If loopback mode was enabled, reconfigure the link accordingly */
-	if (dev->data->dev_conf.lpbk_mode != 0) {
-		if (hw->mac.type == yusur2_mac_X540 ||
-		     hw->mac.type == yusur2_mac_X550 ||
-		     hw->mac.type == yusur2_mac_X550EM_x ||
-		     hw->mac.type == yusur2_mac_X550EM_a)
-			yusur2_setup_loopback_link_x540_x550(hw, false);
 	}
 }
 
@@ -3525,805 +3300,9 @@ yusur2_rss_configure(struct rte_eth_dev *dev)
 #define NUM_VFTA_REGISTERS 128
 #define NIC_RX_BUFFER_SIZE 0x200
 #define X550_RX_BUFFER_SIZE 0x180
-
-static void
-yusur2_vmdq_dcb_configure(struct rte_eth_dev *dev)
-{
-	struct rte_eth_vmdq_dcb_conf *cfg;
-	struct yusur2_hw *hw;
-	enum rte_eth_nb_pools num_pools;
-	uint32_t mrqc, vt_ctl, queue_mapping, vlanctrl;
-	uint16_t pbsize;
-	uint8_t nb_tcs; /* number of traffic classes */
-	int i;
-
-	PMD_INIT_FUNC_TRACE();
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	cfg = &dev->data->dev_conf.rx_adv_conf.vmdq_dcb_conf;
-	num_pools = cfg->nb_queue_pools;
-	/* Check we have a valid number of pools */
-	if (num_pools != ETH_16_POOLS && num_pools != ETH_32_POOLS) {
-		yusur2_rss_disable(dev);
-		return;
-	}
-	/* 16 pools -> 8 traffic classes, 32 pools -> 4 traffic classes */
-	nb_tcs = (uint8_t)(ETH_VMDQ_DCB_NUM_QUEUES / (int)num_pools);
-
-	/*
-	 * RXPBSIZE
-	 * split rx buffer up into sections, each for 1 traffic class
-	 */
-	switch (hw->mac.type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		pbsize = (uint16_t)(X550_RX_BUFFER_SIZE / nb_tcs);
-		break;
-	default:
-		pbsize = (uint16_t)(NIC_RX_BUFFER_SIZE / nb_tcs);
-		break;
-	}
-	for (i = 0; i < nb_tcs; i++) {
-		uint32_t rxpbsize = YUSUR2_READ_REG(hw, YUSUR2_RXPBSIZE(i));
-
-		rxpbsize &= (~(0x3FF << YUSUR2_RXPBSIZE_SHIFT));
-		/* clear 10 bits. */
-		rxpbsize |= (pbsize << YUSUR2_RXPBSIZE_SHIFT); /* set value */
-		YUSUR2_WRITE_REG(hw, YUSUR2_RXPBSIZE(i), rxpbsize);
-	}
-	/* zero alloc all unused TCs */
-	for (i = nb_tcs; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-		uint32_t rxpbsize = YUSUR2_READ_REG(hw, YUSUR2_RXPBSIZE(i));
-
-		rxpbsize &= (~(0x3FF << YUSUR2_RXPBSIZE_SHIFT));
-		/* clear 10 bits. */
-		YUSUR2_WRITE_REG(hw, YUSUR2_RXPBSIZE(i), rxpbsize);
-	}
-
-	/* MRQC: enable vmdq and dcb */
-	mrqc = (num_pools == ETH_16_POOLS) ?
-		YUSUR2_MRQC_VMDQRT8TCEN : YUSUR2_MRQC_VMDQRT4TCEN;
-	YUSUR2_WRITE_REG(hw, YUSUR2_MRQC, mrqc);
-
-	/* PFVTCTL: turn on virtualisation and set the default pool */
-	vt_ctl = YUSUR2_VT_CTL_VT_ENABLE | YUSUR2_VT_CTL_REPLEN;
-	if (cfg->enable_default_pool) {
-		vt_ctl |= (cfg->default_pool << YUSUR2_VT_CTL_POOL_SHIFT);
-	} else {
-		vt_ctl |= YUSUR2_VT_CTL_DIS_DEFPL;
-	}
-
-	YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, vt_ctl);
-
-	/* RTRUP2TC: mapping user priorities to traffic classes (TCs) */
-	queue_mapping = 0;
-	for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++)
-		/*
-		 * mapping is done with 3 bits per priority,
-		 * so shift by i*3 each time
-		 */
-		queue_mapping |= ((cfg->dcb_tc[i] & 0x07) << (i * 3));
-
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTRUP2TC, queue_mapping);
-
-	/* RTRPCS: DCB related */
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTRPCS, YUSUR2_RMCS_RRM);
-
-	/* VLNCTRL: enable vlan filtering and allow all vlan tags through */
-	vlanctrl = YUSUR2_READ_REG(hw, YUSUR2_VLNCTRL);
-	vlanctrl |= YUSUR2_VLNCTRL_VFE; /* enable vlan filters */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VLNCTRL, vlanctrl);
-
-	/* VFTA - enable all vlan filters */
-	for (i = 0; i < NUM_VFTA_REGISTERS; i++) {
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTA(i), 0xFFFFFFFF);
-	}
-
-	/* VFRE: pool enabling for receive - 16 or 32 */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VFRE(0),
-			num_pools == ETH_16_POOLS ? 0xFFFF : 0xFFFFFFFF);
-
-	/*
-	 * MPSAR - allow pools to read specific mac addresses
-	 * In this case, all pools should be able to read from mac addr 0
-	 */
-	YUSUR2_WRITE_REG(hw, YUSUR2_MPSAR_LO(0), 0xFFFFFFFF);
-	YUSUR2_WRITE_REG(hw, YUSUR2_MPSAR_HI(0), 0xFFFFFFFF);
-
-	/* PFVLVF, PFVLVFB: set up filters for vlan tags as configured */
-	for (i = 0; i < cfg->nb_pool_maps; i++) {
-		/* set vlan id in VF register and set the valid bit */
-		YUSUR2_WRITE_REG(hw, YUSUR2_VLVF(i), (YUSUR2_VLVF_VIEN |
-				(cfg->pool_map[i].vlan_id & 0xFFF)));
-		/*
-		 * Put the allowed pools in VFB reg. As we only have 16 or 32
-		 * pools, we only need to use the first half of the register
-		 * i.e. bits 0-31
-		 */
-		YUSUR2_WRITE_REG(hw, YUSUR2_VLVFB(i*2), cfg->pool_map[i].pools);
-	}
-}
-
-/**
- * yusur2_dcb_config_tx_hw_config - Configure general DCB TX parameters
- * @dev: pointer to eth_dev structure
- * @dcb_config: pointer to yusur2_dcb_config structure
- */
-static void
-yusur2_dcb_tx_hw_config(struct rte_eth_dev *dev,
-		       struct yusur2_dcb_config *dcb_config)
-{
-	uint32_t reg;
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	PMD_INIT_FUNC_TRACE();
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		/* Disable the Tx desc arbiter so that MTQC can be changed */
-		reg = YUSUR2_READ_REG(hw, YUSUR2_RTTDCS);
-		reg |= YUSUR2_RTTDCS_ARBDIS;
-		YUSUR2_WRITE_REG(hw, YUSUR2_RTTDCS, reg);
-
-		/* Enable DCB for Tx with 8 TCs */
-		if (dcb_config->num_tcs.pg_tcs == 8) {
-			reg = YUSUR2_MTQC_RT_ENA | YUSUR2_MTQC_8TC_8TQ;
-		} else {
-			reg = YUSUR2_MTQC_RT_ENA | YUSUR2_MTQC_4TC_4TQ;
-		}
-		if (dcb_config->vt_mode)
-			reg |= YUSUR2_MTQC_VT_ENA;
-		YUSUR2_WRITE_REG(hw, YUSUR2_MTQC, reg);
-
-		/* Enable the Tx desc arbiter */
-		reg = YUSUR2_READ_REG(hw, YUSUR2_RTTDCS);
-		reg &= ~YUSUR2_RTTDCS_ARBDIS;
-		YUSUR2_WRITE_REG(hw, YUSUR2_RTTDCS, reg);
-
-		/* Enable Security TX Buffer IFG for DCB */
-		reg = YUSUR2_READ_REG(hw, YUSUR2_SECTXMINIFG);
-		reg |= YUSUR2_SECTX_DCB;
-		YUSUR2_WRITE_REG(hw, YUSUR2_SECTXMINIFG, reg);
-	}
-}
-
-/**
- * yusur2_vmdq_dcb_hw_tx_config - Configure general VMDQ+DCB TX parameters
- * @dev: pointer to rte_eth_dev structure
- * @dcb_config: pointer to yusur2_dcb_config structure
- */
-static void
-yusur2_vmdq_dcb_hw_tx_config(struct rte_eth_dev *dev,
-			struct yusur2_dcb_config *dcb_config)
-{
-	struct rte_eth_vmdq_dcb_tx_conf *vmdq_tx_conf =
-			&dev->data->dev_conf.tx_adv_conf.vmdq_dcb_tx_conf;
-	struct yusur2_hw *hw =
-			YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	PMD_INIT_FUNC_TRACE();
-	if (hw->mac.type != yusur2_mac_82598EB)
-		/*PF VF Transmit Enable*/
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTE(0),
-			vmdq_tx_conf->nb_queue_pools == ETH_16_POOLS ? 0xFFFF : 0xFFFFFFFF);
-
-	/*Configure general DCB TX parameters*/
-	yusur2_dcb_tx_hw_config(dev, dcb_config);
-}
-
-static void
-yusur2_vmdq_dcb_rx_config(struct rte_eth_dev *dev,
-			struct yusur2_dcb_config *dcb_config)
-{
-	struct rte_eth_vmdq_dcb_conf *vmdq_rx_conf =
-			&dev->data->dev_conf.rx_adv_conf.vmdq_dcb_conf;
-	struct yusur2_dcb_tc_config *tc;
-	uint8_t i, j;
-
-	/* convert rte_eth_conf.rx_adv_conf to struct yusur2_dcb_config */
-	if (vmdq_rx_conf->nb_queue_pools == ETH_16_POOLS) {
-		dcb_config->num_tcs.pg_tcs = ETH_8_TCS;
-		dcb_config->num_tcs.pfc_tcs = ETH_8_TCS;
-	} else {
-		dcb_config->num_tcs.pg_tcs = ETH_4_TCS;
-		dcb_config->num_tcs.pfc_tcs = ETH_4_TCS;
-	}
-
-	/* Initialize User Priority to Traffic Class mapping */
-	for (j = 0; j < YUSUR2_DCB_MAX_TRAFFIC_CLASS; j++) {
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_RX_CONFIG].up_to_tc_bitmap = 0;
-	}
-
-	/* User Priority to Traffic Class mapping */
-	for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-		j = vmdq_rx_conf->dcb_tc[i];
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_RX_CONFIG].up_to_tc_bitmap |=
-						(uint8_t)(1 << i);
-	}
-}
-
-static void
-yusur2_dcb_vt_tx_config(struct rte_eth_dev *dev,
-			struct yusur2_dcb_config *dcb_config)
-{
-	struct rte_eth_vmdq_dcb_tx_conf *vmdq_tx_conf =
-			&dev->data->dev_conf.tx_adv_conf.vmdq_dcb_tx_conf;
-	struct yusur2_dcb_tc_config *tc;
-	uint8_t i, j;
-
-	/* convert rte_eth_conf.rx_adv_conf to struct yusur2_dcb_config */
-	if (vmdq_tx_conf->nb_queue_pools == ETH_16_POOLS) {
-		dcb_config->num_tcs.pg_tcs = ETH_8_TCS;
-		dcb_config->num_tcs.pfc_tcs = ETH_8_TCS;
-	} else {
-		dcb_config->num_tcs.pg_tcs = ETH_4_TCS;
-		dcb_config->num_tcs.pfc_tcs = ETH_4_TCS;
-	}
-
-	/* Initialize User Priority to Traffic Class mapping */
-	for (j = 0; j < YUSUR2_DCB_MAX_TRAFFIC_CLASS; j++) {
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_TX_CONFIG].up_to_tc_bitmap = 0;
-	}
-
-	/* User Priority to Traffic Class mapping */
-	for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-		j = vmdq_tx_conf->dcb_tc[i];
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_TX_CONFIG].up_to_tc_bitmap |=
-						(uint8_t)(1 << i);
-	}
-}
-
-static void
-yusur2_dcb_rx_config(struct rte_eth_dev *dev,
-		struct yusur2_dcb_config *dcb_config)
-{
-	struct rte_eth_dcb_rx_conf *rx_conf =
-			&dev->data->dev_conf.rx_adv_conf.dcb_rx_conf;
-	struct yusur2_dcb_tc_config *tc;
-	uint8_t i, j;
-
-	dcb_config->num_tcs.pg_tcs = (uint8_t)rx_conf->nb_tcs;
-	dcb_config->num_tcs.pfc_tcs = (uint8_t)rx_conf->nb_tcs;
-
-	/* Initialize User Priority to Traffic Class mapping */
-	for (j = 0; j < YUSUR2_DCB_MAX_TRAFFIC_CLASS; j++) {
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_RX_CONFIG].up_to_tc_bitmap = 0;
-	}
-
-	/* User Priority to Traffic Class mapping */
-	for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-		j = rx_conf->dcb_tc[i];
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_RX_CONFIG].up_to_tc_bitmap |=
-						(uint8_t)(1 << i);
-	}
-}
-
-static void
-yusur2_dcb_tx_config(struct rte_eth_dev *dev,
-		struct yusur2_dcb_config *dcb_config)
-{
-	struct rte_eth_dcb_tx_conf *tx_conf =
-			&dev->data->dev_conf.tx_adv_conf.dcb_tx_conf;
-	struct yusur2_dcb_tc_config *tc;
-	uint8_t i, j;
-
-	dcb_config->num_tcs.pg_tcs = (uint8_t)tx_conf->nb_tcs;
-	dcb_config->num_tcs.pfc_tcs = (uint8_t)tx_conf->nb_tcs;
-
-	/* Initialize User Priority to Traffic Class mapping */
-	for (j = 0; j < YUSUR2_DCB_MAX_TRAFFIC_CLASS; j++) {
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_TX_CONFIG].up_to_tc_bitmap = 0;
-	}
-
-	/* User Priority to Traffic Class mapping */
-	for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-		j = tx_conf->dcb_tc[i];
-		tc = &dcb_config->tc_config[j];
-		tc->path[YUSUR2_DCB_TX_CONFIG].up_to_tc_bitmap |=
-						(uint8_t)(1 << i);
-	}
-}
-
-/**
- * yusur2_dcb_rx_hw_config - Configure general DCB RX HW parameters
- * @dev: pointer to eth_dev structure
- * @dcb_config: pointer to yusur2_dcb_config structure
- */
-static void
-yusur2_dcb_rx_hw_config(struct rte_eth_dev *dev,
-		       struct yusur2_dcb_config *dcb_config)
-{
-	uint32_t reg;
-	uint32_t vlanctrl;
-	uint8_t i;
-	uint32_t q;
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	PMD_INIT_FUNC_TRACE();
-	/*
-	 * Disable the arbiter before changing parameters
-	 * (always enable recycle mode; WSP)
-	 */
-	reg = YUSUR2_RTRPCS_RRM | YUSUR2_RTRPCS_RAC | YUSUR2_RTRPCS_ARBDIS;
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTRPCS, reg);
-
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		reg = YUSUR2_READ_REG(hw, YUSUR2_MRQC);
-		if (dcb_config->num_tcs.pg_tcs == 4) {
-			if (dcb_config->vt_mode)
-				reg = (reg & ~YUSUR2_MRQC_MRQE_MASK) |
-					YUSUR2_MRQC_VMDQRT4TCEN;
-			else {
-				/* no matter the mode is DCB or DCB_RSS, just
-				 * set the MRQE to RSSXTCEN. RSS is controlled
-				 * by RSS_FIELD
-				 */
-				YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, 0);
-				reg = (reg & ~YUSUR2_MRQC_MRQE_MASK) |
-					YUSUR2_MRQC_RTRSS4TCEN;
-			}
-		}
-		if (dcb_config->num_tcs.pg_tcs == 8) {
-			if (dcb_config->vt_mode)
-				reg = (reg & ~YUSUR2_MRQC_MRQE_MASK) |
-					YUSUR2_MRQC_VMDQRT8TCEN;
-			else {
-				YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, 0);
-				reg = (reg & ~YUSUR2_MRQC_MRQE_MASK) |
-					YUSUR2_MRQC_RTRSS8TCEN;
-			}
-		}
-
-		YUSUR2_WRITE_REG(hw, YUSUR2_MRQC, reg);
-
-		if (RTE_ETH_DEV_SRIOV(dev).active == 0) {
-			/* Disable drop for all queues in VMDQ mode*/
-			for (q = 0; q < YUSUR2_MAX_RX_QUEUE_NUM; q++)
-				YUSUR2_WRITE_REG(hw, YUSUR2_QDE,
-						(YUSUR2_QDE_WRITE |
-						 (q << YUSUR2_QDE_IDX_SHIFT)));
-		} else {
-			/* Enable drop for all queues in SRIOV mode */
-			for (q = 0; q < YUSUR2_MAX_RX_QUEUE_NUM; q++)
-				YUSUR2_WRITE_REG(hw, YUSUR2_QDE,
-						(YUSUR2_QDE_WRITE |
-						 (q << YUSUR2_QDE_IDX_SHIFT) |
-						 YUSUR2_QDE_ENABLE));
-		}
-	}
-
-	/* VLNCTRL: enable vlan filtering and allow all vlan tags through */
-	vlanctrl = YUSUR2_READ_REG(hw, YUSUR2_VLNCTRL);
-	vlanctrl |= YUSUR2_VLNCTRL_VFE; /* enable vlan filters */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VLNCTRL, vlanctrl);
-
-	/* VFTA - enable all vlan filters */
-	for (i = 0; i < NUM_VFTA_REGISTERS; i++) {
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTA(i), 0xFFFFFFFF);
-	}
-
-	/*
-	 * Configure Rx packet plane (recycle mode; WSP) and
-	 * enable arbiter
-	 */
-	reg = YUSUR2_RTRPCS_RRM | YUSUR2_RTRPCS_RAC;
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTRPCS, reg);
-}
-
-static void
-yusur2_dcb_hw_arbite_rx_config(struct yusur2_hw *hw, uint16_t *refill,
-			uint16_t *max, uint8_t *bwg_id, uint8_t *tsa, uint8_t *map)
-{
-	switch (hw->mac.type) {
-	case yusur2_mac_82598EB:
-		yusur2_dcb_config_rx_arbiter_82598(hw, refill, max, tsa);
-		break;
-	case yusur2_mac_82599EB:
-	case yusur2_mac_X540:
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		yusur2_dcb_config_rx_arbiter_82599(hw, refill, max, bwg_id,
-						  tsa, map);
-		break;
-	default:
-		break;
-	}
-}
-
-static void
-yusur2_dcb_hw_arbite_tx_config(struct yusur2_hw *hw, uint16_t *refill, uint16_t *max,
-			    uint8_t *bwg_id, uint8_t *tsa, uint8_t *map)
-{
-	switch (hw->mac.type) {
-	case yusur2_mac_82598EB:
-		yusur2_dcb_config_tx_desc_arbiter_82598(hw, refill, max, bwg_id, tsa);
-		yusur2_dcb_config_tx_data_arbiter_82598(hw, refill, max, bwg_id, tsa);
-		break;
-	case yusur2_mac_82599EB:
-	case yusur2_mac_X540:
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		yusur2_dcb_config_tx_desc_arbiter_82599(hw, refill, max, bwg_id, tsa);
-		yusur2_dcb_config_tx_data_arbiter_82599(hw, refill, max, bwg_id, tsa, map);
-		break;
-	default:
-		break;
-	}
-}
-
 #define DCB_RX_CONFIG  1
 #define DCB_TX_CONFIG  1
 #define DCB_TX_PB      1024
-/**
- * yusur2_dcb_hw_configure - Enable DCB and configure
- * general DCB in VT mode and non-VT mode parameters
- * @dev: pointer to rte_eth_dev structure
- * @dcb_config: pointer to yusur2_dcb_config structure
- */
-static int
-yusur2_dcb_hw_configure(struct rte_eth_dev *dev,
-			struct yusur2_dcb_config *dcb_config)
-{
-	int     ret = 0;
-	uint8_t i, pfc_en, nb_tcs;
-	uint16_t pbsize, rx_buffer_size;
-	uint8_t config_dcb_rx = 0;
-	uint8_t config_dcb_tx = 0;
-	uint8_t tsa[YUSUR2_DCB_MAX_TRAFFIC_CLASS] = {0};
-	uint8_t bwgid[YUSUR2_DCB_MAX_TRAFFIC_CLASS] = {0};
-	uint16_t refill[YUSUR2_DCB_MAX_TRAFFIC_CLASS] = {0};
-	uint16_t max[YUSUR2_DCB_MAX_TRAFFIC_CLASS] = {0};
-	uint8_t map[YUSUR2_DCB_MAX_TRAFFIC_CLASS] = {0};
-	struct yusur2_dcb_tc_config *tc;
-	uint32_t max_frame = dev->data->mtu + RTE_ETHER_HDR_LEN +
-		RTE_ETHER_CRC_LEN;
-	struct yusur2_hw *hw =
-			YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_bw_conf *bw_conf =
-		YUSUR2_DEV_PRIVATE_TO_BW_CONF(dev->data->dev_private);
-
-	switch (dev->data->dev_conf.rxmode.mq_mode) {
-	case ETH_MQ_RX_VMDQ_DCB:
-		dcb_config->vt_mode = true;
-		if (hw->mac.type != yusur2_mac_82598EB) {
-			config_dcb_rx = DCB_RX_CONFIG;
-			/*
-			 *get dcb and VT rx configuration parameters
-			 *from rte_eth_conf
-			 */
-			yusur2_vmdq_dcb_rx_config(dev, dcb_config);
-			/*Configure general VMDQ and DCB RX parameters*/
-			yusur2_vmdq_dcb_configure(dev);
-		}
-		break;
-	case ETH_MQ_RX_DCB:
-	case ETH_MQ_RX_DCB_RSS:
-		dcb_config->vt_mode = false;
-		config_dcb_rx = DCB_RX_CONFIG;
-		/* Get dcb TX configuration parameters from rte_eth_conf */
-		yusur2_dcb_rx_config(dev, dcb_config);
-		/*Configure general DCB RX parameters*/
-		yusur2_dcb_rx_hw_config(dev, dcb_config);
-		break;
-	default:
-		PMD_INIT_LOG(ERR, "Incorrect DCB RX mode configuration");
-		break;
-	}
-	switch (dev->data->dev_conf.txmode.mq_mode) {
-	case ETH_MQ_TX_VMDQ_DCB:
-		dcb_config->vt_mode = true;
-		config_dcb_tx = DCB_TX_CONFIG;
-		/* get DCB and VT TX configuration parameters
-		 * from rte_eth_conf
-		 */
-		yusur2_dcb_vt_tx_config(dev, dcb_config);
-		/*Configure general VMDQ and DCB TX parameters*/
-		yusur2_vmdq_dcb_hw_tx_config(dev, dcb_config);
-		break;
-
-	case ETH_MQ_TX_DCB:
-		dcb_config->vt_mode = false;
-		config_dcb_tx = DCB_TX_CONFIG;
-		/*get DCB TX configuration parameters from rte_eth_conf*/
-		yusur2_dcb_tx_config(dev, dcb_config);
-		/*Configure general DCB TX parameters*/
-		yusur2_dcb_tx_hw_config(dev, dcb_config);
-		break;
-	default:
-		PMD_INIT_LOG(ERR, "Incorrect DCB TX mode configuration");
-		break;
-	}
-
-	nb_tcs = dcb_config->num_tcs.pfc_tcs;
-	/* Unpack map */
-	yusur2_dcb_unpack_map_cee(dcb_config, YUSUR2_DCB_RX_CONFIG, map);
-	if (nb_tcs == ETH_4_TCS) {
-		/* Avoid un-configured priority mapping to TC0 */
-		uint8_t j = 4;
-		uint8_t mask = 0xFF;
-
-		for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES - 4; i++)
-			mask = (uint8_t)(mask & (~(1 << map[i])));
-		for (i = 0; mask && (i < YUSUR2_DCB_MAX_TRAFFIC_CLASS); i++) {
-			if ((mask & 0x1) && (j < ETH_DCB_NUM_USER_PRIORITIES))
-				map[j++] = i;
-			mask >>= 1;
-		}
-		/* Re-configure 4 TCs BW */
-		for (i = 0; i < nb_tcs; i++) {
-			tc = &dcb_config->tc_config[i];
-			if (bw_conf->tc_num != nb_tcs)
-				tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent =
-					(uint8_t)(100 / nb_tcs);
-			tc->path[YUSUR2_DCB_RX_CONFIG].bwg_percent =
-						(uint8_t)(100 / nb_tcs);
-		}
-		for (; i < YUSUR2_DCB_MAX_TRAFFIC_CLASS; i++) {
-			tc = &dcb_config->tc_config[i];
-			tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent = 0;
-			tc->path[YUSUR2_DCB_RX_CONFIG].bwg_percent = 0;
-		}
-	} else {
-		/* Re-configure 8 TCs BW */
-		for (i = 0; i < nb_tcs; i++) {
-			tc = &dcb_config->tc_config[i];
-			if (bw_conf->tc_num != nb_tcs)
-				tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent =
-					(uint8_t)(100 / nb_tcs + (i & 1));
-			tc->path[YUSUR2_DCB_RX_CONFIG].bwg_percent =
-				(uint8_t)(100 / nb_tcs + (i & 1));
-		}
-	}
-
-	switch (hw->mac.type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		rx_buffer_size = X550_RX_BUFFER_SIZE;
-		break;
-	default:
-		rx_buffer_size = NIC_RX_BUFFER_SIZE;
-		break;
-	}
-
-	if (config_dcb_rx) {
-		/* Set RX buffer size */
-		pbsize = (uint16_t)(rx_buffer_size / nb_tcs);
-		uint32_t rxpbsize = pbsize << YUSUR2_RXPBSIZE_SHIFT;
-
-		for (i = 0; i < nb_tcs; i++) {
-			YUSUR2_WRITE_REG(hw, YUSUR2_RXPBSIZE(i), rxpbsize);
-		}
-		/* zero alloc all unused TCs */
-		for (; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-			YUSUR2_WRITE_REG(hw, YUSUR2_RXPBSIZE(i), 0);
-		}
-	}
-	if (config_dcb_tx) {
-		/* Only support an equally distributed
-		 *  Tx packet buffer strategy.
-		 */
-		uint32_t txpktsize = YUSUR2_TXPBSIZE_MAX / nb_tcs;
-		uint32_t txpbthresh = (txpktsize / DCB_TX_PB) - YUSUR2_TXPKT_SIZE_MAX;
-
-		for (i = 0; i < nb_tcs; i++) {
-			YUSUR2_WRITE_REG(hw, YUSUR2_TXPBSIZE(i), txpktsize);
-			YUSUR2_WRITE_REG(hw, YUSUR2_TXPBTHRESH(i), txpbthresh);
-		}
-		/* Clear unused TCs, if any, to zero buffer size*/
-		for (; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
-			YUSUR2_WRITE_REG(hw, YUSUR2_TXPBSIZE(i), 0);
-			YUSUR2_WRITE_REG(hw, YUSUR2_TXPBTHRESH(i), 0);
-		}
-	}
-
-	/*Calculates traffic class credits*/
-	yusur2_dcb_calculate_tc_credits_cee(hw, dcb_config, max_frame,
-				YUSUR2_DCB_TX_CONFIG);
-	yusur2_dcb_calculate_tc_credits_cee(hw, dcb_config, max_frame,
-				YUSUR2_DCB_RX_CONFIG);
-
-	if (config_dcb_rx) {
-		/* Unpack CEE standard containers */
-		yusur2_dcb_unpack_refill_cee(dcb_config, YUSUR2_DCB_RX_CONFIG, refill);
-		yusur2_dcb_unpack_max_cee(dcb_config, max);
-		yusur2_dcb_unpack_bwgid_cee(dcb_config, YUSUR2_DCB_RX_CONFIG, bwgid);
-		yusur2_dcb_unpack_tsa_cee(dcb_config, YUSUR2_DCB_RX_CONFIG, tsa);
-		/* Configure PG(ETS) RX */
-		yusur2_dcb_hw_arbite_rx_config(hw, refill, max, bwgid, tsa, map);
-	}
-
-	if (config_dcb_tx) {
-		/* Unpack CEE standard containers */
-		yusur2_dcb_unpack_refill_cee(dcb_config, YUSUR2_DCB_TX_CONFIG, refill);
-		yusur2_dcb_unpack_max_cee(dcb_config, max);
-		yusur2_dcb_unpack_bwgid_cee(dcb_config, YUSUR2_DCB_TX_CONFIG, bwgid);
-		yusur2_dcb_unpack_tsa_cee(dcb_config, YUSUR2_DCB_TX_CONFIG, tsa);
-		/* Configure PG(ETS) TX */
-		yusur2_dcb_hw_arbite_tx_config(hw, refill, max, bwgid, tsa, map);
-	}
-
-	/*Configure queue statistics registers*/
-	yusur2_dcb_config_tc_stats_82599(hw, dcb_config);
-
-	/* Check if the PFC is supported */
-	if (dev->data->dev_conf.dcb_capability_en & ETH_DCB_PFC_SUPPORT) {
-		pbsize = (uint16_t)(rx_buffer_size / nb_tcs);
-		for (i = 0; i < nb_tcs; i++) {
-			/*
-			* If the TC count is 8,and the default high_water is 48,
-			* the low_water is 16 as default.
-			*/
-			hw->fc.high_water[i] = (pbsize * 3) / 4;
-			hw->fc.low_water[i] = pbsize / 4;
-			/* Enable pfc for this TC */
-			tc = &dcb_config->tc_config[i];
-			tc->pfc = yusur2_dcb_pfc_enabled;
-		}
-		yusur2_dcb_unpack_pfc_cee(dcb_config, map, &pfc_en);
-		if (dcb_config->num_tcs.pfc_tcs == ETH_4_TCS)
-			pfc_en &= 0x0F;
-		ret = yusur2_dcb_config_pfc(hw, pfc_en, map);
-	}
-
-	return ret;
-}
-
-/**
- * yusur2_configure_dcb - Configure DCB  Hardware
- * @dev: pointer to rte_eth_dev
- */
-void yusur2_configure_dcb(struct rte_eth_dev *dev)
-{
-	struct yusur2_dcb_config *dcb_cfg =
-			YUSUR2_DEV_PRIVATE_TO_DCB_CFG(dev->data->dev_private);
-	struct rte_eth_conf *dev_conf = &(dev->data->dev_conf);
-
-	PMD_INIT_FUNC_TRACE();
-
-	/* check support mq_mode for DCB */
-	if ((dev_conf->rxmode.mq_mode != ETH_MQ_RX_VMDQ_DCB) &&
-	    (dev_conf->rxmode.mq_mode != ETH_MQ_RX_DCB) &&
-	    (dev_conf->rxmode.mq_mode != ETH_MQ_RX_DCB_RSS))
-		return;
-
-	if (dev->data->nb_rx_queues > ETH_DCB_NUM_QUEUES)
-		return;
-
-	/** Configure DCB hardware **/
-	yusur2_dcb_hw_configure(dev, dcb_cfg);
-}
-
-/*
- * VMDq only support for 10 GbE NIC.
- */
-static void
-yusur2_vmdq_rx_hw_configure(struct rte_eth_dev *dev)
-{
-	struct rte_eth_vmdq_rx_conf *cfg;
-	struct yusur2_hw *hw;
-	enum rte_eth_nb_pools num_pools;
-	uint32_t mrqc, vt_ctl, vlanctrl;
-	uint32_t vmolr = 0;
-	int i;
-
-	PMD_INIT_FUNC_TRACE();
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	cfg = &dev->data->dev_conf.rx_adv_conf.vmdq_rx_conf;
-	num_pools = cfg->nb_queue_pools;
-
-	yusur2_rss_disable(dev);
-
-	/* MRQC: enable vmdq */
-	mrqc = YUSUR2_MRQC_VMDQEN;
-	YUSUR2_WRITE_REG(hw, YUSUR2_MRQC, mrqc);
-
-	/* PFVTCTL: turn on virtualisation and set the default pool */
-	vt_ctl = YUSUR2_VT_CTL_VT_ENABLE | YUSUR2_VT_CTL_REPLEN;
-	if (cfg->enable_default_pool)
-		vt_ctl |= (cfg->default_pool << YUSUR2_VT_CTL_POOL_SHIFT);
-	else
-		vt_ctl |= YUSUR2_VT_CTL_DIS_DEFPL;
-
-	YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, vt_ctl);
-
-	for (i = 0; i < (int)num_pools; i++) {
-		vmolr = yusur2_convert_vm_rx_mask_to_val(cfg->rx_mode, vmolr);
-		YUSUR2_WRITE_REG(hw, YUSUR2_VMOLR(i), vmolr);
-	}
-
-	/* VLNCTRL: enable vlan filtering and allow all vlan tags through */
-	vlanctrl = YUSUR2_READ_REG(hw, YUSUR2_VLNCTRL);
-	vlanctrl |= YUSUR2_VLNCTRL_VFE; /* enable vlan filters */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VLNCTRL, vlanctrl);
-
-	/* VFTA - enable all vlan filters */
-	for (i = 0; i < NUM_VFTA_REGISTERS; i++)
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTA(i), UINT32_MAX);
-
-	/* VFRE: pool enabling for receive - 64 */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VFRE(0), UINT32_MAX);
-	if (num_pools == ETH_64_POOLS)
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRE(1), UINT32_MAX);
-
-	/*
-	 * MPSAR - allow pools to read specific mac addresses
-	 * In this case, all pools should be able to read from mac addr 0
-	 */
-	YUSUR2_WRITE_REG(hw, YUSUR2_MPSAR_LO(0), UINT32_MAX);
-	YUSUR2_WRITE_REG(hw, YUSUR2_MPSAR_HI(0), UINT32_MAX);
-
-	/* PFVLVF, PFVLVFB: set up filters for vlan tags as configured */
-	for (i = 0; i < cfg->nb_pool_maps; i++) {
-		/* set vlan id in VF register and set the valid bit */
-		YUSUR2_WRITE_REG(hw, YUSUR2_VLVF(i), (YUSUR2_VLVF_VIEN |
-				(cfg->pool_map[i].vlan_id & YUSUR2_RXD_VLAN_ID_MASK)));
-		/*
-		 * Put the allowed pools in VFB reg. As we only have 16 or 64
-		 * pools, we only need to use the first half of the register
-		 * i.e. bits 0-31
-		 */
-		if (((cfg->pool_map[i].pools >> 32) & UINT32_MAX) == 0)
-			YUSUR2_WRITE_REG(hw, YUSUR2_VLVFB(i * 2),
-					(cfg->pool_map[i].pools & UINT32_MAX));
-		else
-			YUSUR2_WRITE_REG(hw, YUSUR2_VLVFB((i * 2 + 1)),
-					((cfg->pool_map[i].pools >> 32) & UINT32_MAX));
-
-	}
-
-	/* PFDMA Tx General Switch Control Enables VMDQ loopback */
-	if (cfg->enable_loop_back) {
-		YUSUR2_WRITE_REG(hw, YUSUR2_PFDTXGSWC, YUSUR2_PFDTXGSWC_VT_LBEN);
-		for (i = 0; i < RTE_YUSUR2_VMTXSW_REGISTER_COUNT; i++)
-			YUSUR2_WRITE_REG(hw, YUSUR2_VMTXSW(i), UINT32_MAX);
-	}
-
-	YUSUR2_WRITE_FLUSH(hw);
-}
-
-/*
- * yusur2_dcb_config_tx_hw_config - Configure general VMDq TX parameters
- * @hw: pointer to hardware structure
- */
-static void
-yusur2_vmdq_tx_hw_configure(struct yusur2_hw *hw)
-{
-	uint32_t reg;
-	uint32_t q;
-
-	PMD_INIT_FUNC_TRACE();
-	/*PF VF Transmit Enable*/
-	YUSUR2_WRITE_REG(hw, YUSUR2_VFTE(0), UINT32_MAX);
-	YUSUR2_WRITE_REG(hw, YUSUR2_VFTE(1), UINT32_MAX);
-
-	/* Disable the Tx desc arbiter so that MTQC can be changed */
-	reg = YUSUR2_READ_REG(hw, YUSUR2_RTTDCS);
-	reg |= YUSUR2_RTTDCS_ARBDIS;
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTTDCS, reg);
-
-	reg = YUSUR2_MTQC_VT_ENA | YUSUR2_MTQC_64VF;
-	YUSUR2_WRITE_REG(hw, YUSUR2_MTQC, reg);
-
-	/* Disable drop for all queues */
-	for (q = 0; q < YUSUR2_MAX_RX_QUEUE_NUM; q++)
-		YUSUR2_WRITE_REG(hw, YUSUR2_QDE,
-		  (YUSUR2_QDE_WRITE | (q << YUSUR2_QDE_IDX_SHIFT)));
-
-	/* Enable the Tx desc arbiter */
-	reg = YUSUR2_READ_REG(hw, YUSUR2_RTTDCS);
-	reg &= ~YUSUR2_RTTDCS_ARBDIS;
-	YUSUR2_WRITE_REG(hw, YUSUR2_RTTDCS, reg);
-
-	YUSUR2_WRITE_FLUSH(hw);
-}
 
 static int __attribute__((cold))
 yusur2_alloc_rx_queue_mbufs(struct yusur2_rx_queue *rxq)
@@ -4421,6 +3400,8 @@ yusur2_config_vf_default(struct rte_eth_dev *dev)
 static int
 yusur2_dev_mq_rx_configure(struct rte_eth_dev *dev)
 {
+	//TODO: check
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -4478,13 +3459,15 @@ yusur2_dev_mq_rx_configure(struct rte_eth_dev *dev)
 			break;
 		}
 	}
-
+#endif
 	return 0;
 }
 
 static int
 yusur2_dev_mq_tx_configure(struct rte_eth_dev *dev)
 {
+//TODO: multi-queue support..haha
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t mtqc;
@@ -4536,7 +3519,7 @@ yusur2_dev_mq_tx_configure(struct rte_eth_dev *dev)
 	/* re-enable arbiter */
 	rttdcs &= ~YUSUR2_RTTDCS_ARBDIS;
 	YUSUR2_WRITE_REG(hw, YUSUR2_RTTDCS, rttdcs);
-
+#endif
 	return 0;
 }
 
@@ -4583,46 +3566,7 @@ yusur2_get_rscctl_maxdesc(struct rte_mempool *pool)
 static void
 yusur2_set_ivar(struct rte_eth_dev *dev, u8 entry, u8 vector, s8 type)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	u32 ivar, index;
-
-	vector |= YUSUR2_IVAR_ALLOC_VAL;
-
-	switch (hw->mac.type) {
-
-	case yusur2_mac_82598EB:
-		if (type == -1)
-			entry = YUSUR2_IVAR_OTHER_CAUSES_INDEX;
-		else
-			entry += (type * 64);
-		index = (entry >> 2) & 0x1F;
-		ivar = YUSUR2_READ_REG(hw, YUSUR2_IVAR(index));
-		ivar &= ~(0xFF << (8 * (entry & 0x3)));
-		ivar |= (vector << (8 * (entry & 0x3)));
-		YUSUR2_WRITE_REG(hw, YUSUR2_IVAR(index), ivar);
-		break;
-
-	case yusur2_mac_82599EB:
-	case yusur2_mac_X540:
-		if (type == -1) { /* MISC IVAR */
-			index = (entry & 1) * 8;
-			ivar = YUSUR2_READ_REG(hw, YUSUR2_IVAR_MISC);
-			ivar &= ~(0xFF << index);
-			ivar |= (vector << index);
-			YUSUR2_WRITE_REG(hw, YUSUR2_IVAR_MISC, ivar);
-		} else {	/* RX/TX IVARS */
-			index = (16 * (entry & 1)) + (8 * type);
-			ivar = YUSUR2_READ_REG(hw, YUSUR2_IVAR(entry >> 1));
-			ivar &= ~(0xFF << index);
-			ivar |= (vector << index);
-			YUSUR2_WRITE_REG(hw, YUSUR2_IVAR(entry >> 1), ivar);
-		}
-
-		break;
-
-	default:
-		break;
-	}
+	//TODO: check...
 }
 
 void __attribute__((cold))
@@ -5033,17 +3977,6 @@ yusur2_dev_rx_init(struct rte_eth_dev *dev)
 
 	YUSUR2_WRITE_REG(hw, YUSUR2_RXCSUM, rxcsum);
 
-	if (hw->mac.type == yusur2_mac_82599EB ||
-	    hw->mac.type == yusur2_mac_X540) {
-		rdrxctl = YUSUR2_READ_REG(hw, YUSUR2_RDRXCTL);
-		if (rx_conf->offloads & DEV_RX_OFFLOAD_KEEP_CRC)
-			rdrxctl &= ~YUSUR2_RDRXCTL_CRCSTRIP;
-		else
-			rdrxctl |= YUSUR2_RDRXCTL_CRCSTRIP;
-		rdrxctl &= ~YUSUR2_RDRXCTL_RSCFRSTSIZE;
-		YUSUR2_WRITE_REG(hw, YUSUR2_RDRXCTL, rdrxctl);
-	}
-
 	rc = yusur2_set_rsc(dev);
 	if (rc)
 		return rc;
@@ -5059,6 +3992,8 @@ yusur2_dev_rx_init(struct rte_eth_dev *dev)
 void __attribute__((cold))
 yusur2_dev_tx_init(struct rte_eth_dev *dev)
 {
+//TODO: how to init yusur hw tx unit... important...
+#if 0
 	struct yusur2_hw     *hw;
 	struct yusur2_tx_queue *txq;
 	uint64_t bus_addr;
@@ -5121,6 +4056,7 @@ yusur2_dev_tx_init(struct rte_eth_dev *dev)
 
 	/* Device configured with multiple TX queues. */
 	yusur2_dev_mq_tx_configure(dev);
+#endif
 }
 
 /*
@@ -5129,17 +4065,12 @@ yusur2_dev_tx_init(struct rte_eth_dev *dev)
 int
 yusur2_check_supported_loopback_mode(struct rte_eth_dev *dev)
 {
+//TODO:
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
-	if (dev->data->dev_conf.lpbk_mode == YUSUR2_LPBK_TX_RX)
-		if (hw->mac.type == yusur2_mac_82599EB ||
-		     hw->mac.type == yusur2_mac_X540 ||
-		     hw->mac.type == yusur2_mac_X550 ||
-		     hw->mac.type == yusur2_mac_X550EM_x ||
-		     hw->mac.type == yusur2_mac_X550EM_a)
-			return 0;
-
-	return -ENOTSUP;
+	return 0
+#endif
 }
 
 /*
@@ -5198,12 +4129,6 @@ yusur2_dev_rxtx_start(struct rte_eth_dev *dev)
 		YUSUR2_WRITE_REG(hw, YUSUR2_TXDCTL(txq->reg_idx), txdctl);
 	}
 
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		dmatxctl = YUSUR2_READ_REG(hw, YUSUR2_DMATXCTL);
-		dmatxctl |= YUSUR2_DMATXCTL_TE;
-		YUSUR2_WRITE_REG(hw, YUSUR2_DMATXCTL, dmatxctl);
-	}
-
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		txq = dev->data->tx_queues[i];
 		if (!txq->tx_deferred_start) {
@@ -5224,36 +4149,11 @@ yusur2_dev_rxtx_start(struct rte_eth_dev *dev)
 
 	/* Enable Receive engine */
 	rxctrl = YUSUR2_READ_REG(hw, YUSUR2_RXCTRL);
-	if (hw->mac.type == yusur2_mac_82598EB)
-		rxctrl |= YUSUR2_RXCTRL_DMBYPS;
 	rxctrl |= YUSUR2_RXCTRL_RXEN;
 	hw->mac.ops.enable_rx_dma(hw, rxctrl);
 
 	/* If loopback mode is enabled, set up the link accordingly */
-	if (dev->data->dev_conf.lpbk_mode != 0) {
-		if (hw->mac.type == yusur2_mac_82599EB)
-			yusur2_setup_loopback_link_82599(hw);
-		else if (hw->mac.type == yusur2_mac_X540 ||
-		     hw->mac.type == yusur2_mac_X550 ||
-		     hw->mac.type == yusur2_mac_X550EM_x ||
-		     hw->mac.type == yusur2_mac_X550EM_a)
-			yusur2_setup_loopback_link_x540_x550(hw, true);
-	}
-
-#ifdef RTE_LIBRTE_SECURITY
-	if ((dev->data->dev_conf.rxmode.offloads &
-			DEV_RX_OFFLOAD_SECURITY) ||
-		(dev->data->dev_conf.txmode.offloads &
-			DEV_TX_OFFLOAD_SECURITY)) {
-		ret = yusur2_crypto_enable_ipsec(dev);
-		if (ret != 0) {
-			PMD_DRV_LOG(ERR,
-				    "yusur2_crypto_enable_ipsec fails with %d.",
-				    ret);
-			return ret;
-		}
-	}
-#endif
+	//TODO: loopback support
 
 	return 0;
 }
@@ -5346,6 +4246,8 @@ yusur2_dev_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 int __attribute__((cold))
 yusur2_dev_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 {
+//TODO:check
+#if 0
 	struct yusur2_hw     *hw;
 	struct yusur2_tx_queue *txq;
 	uint32_t txdctl;
@@ -5375,7 +4277,7 @@ yusur2_dev_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	rte_wmb();
 	YUSUR2_WRITE_REG(hw, YUSUR2_TDT(txq->reg_idx), 0);
 	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
-
+#endif
 	return 0;
 }
 
@@ -5385,6 +4287,8 @@ yusur2_dev_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 int __attribute__((cold))
 yusur2_dev_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 {
+//TODO: check
+#if 0
 	struct yusur2_hw     *hw;
 	struct yusur2_tx_queue *txq;
 	uint32_t txdctl;
@@ -5434,7 +4338,7 @@ yusur2_dev_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 		txq->ops->reset(txq);
 	}
 	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
-
+#endif
 	return 0;
 }
 
@@ -5482,120 +4386,7 @@ yusur2_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 int __attribute__((cold))
 yusur2vf_dev_rx_init(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw     *hw;
-	struct yusur2_rx_queue *rxq;
-	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
-	uint64_t bus_addr;
-	uint32_t srrctl, psrtype = 0;
-	uint16_t buf_size;
-	uint16_t i;
-	int ret;
-
-	PMD_INIT_FUNC_TRACE();
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	if (rte_is_power_of_2(dev->data->nb_rx_queues) == 0) {
-		PMD_INIT_LOG(ERR, "The number of Rx queue invalid, "
-			"it should be power of 2");
-		return -1;
-	}
-
-	if (dev->data->nb_rx_queues > hw->mac.max_rx_queues) {
-		PMD_INIT_LOG(ERR, "The number of Rx queue invalid, "
-			"it should be equal to or less than %d",
-			hw->mac.max_rx_queues);
-		return -1;
-	}
-
-	/*
-	 * When the VF driver issues a YUSUR2_VF_RESET request, the PF driver
-	 * disables the VF receipt of packets if the PF MTU is > 1500.
-	 * This is done to deal with 82599 limitations that imposes
-	 * the PF and all VFs to share the same MTU.
-	 * Then, the PF driver enables again the VF receipt of packet when
-	 * the VF driver issues a YUSUR2_VF_SET_LPE request.
-	 * In the meantime, the VF device cannot be used, even if the VF driver
-	 * and the Guest VM network stack are ready to accept packets with a
-	 * size up to the PF MTU.
-	 * As a work-around to this PF behaviour, force the call to
-	 * yusur2vf_rlpml_set_vf even if jumbo frames are not used. This way,
-	 * VF packets received can work in all cases.
-	 */
-	yusur2vf_rlpml_set_vf(hw,
-		(uint16_t)dev->data->dev_conf.rxmode.max_rx_pkt_len);
-
-	/*
-	 * Assume no header split and no VLAN strip support
-	 * on any Rx queue first .
-	 */
-	rxmode->offloads &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
-	/* Setup RX queues */
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		rxq = dev->data->rx_queues[i];
-
-		/* Allocate buffers for descriptor rings */
-		ret = yusur2_alloc_rx_queue_mbufs(rxq);
-		if (ret)
-			return ret;
-
-		/* Setup the Base and Length of the Rx Descriptor Rings */
-		bus_addr = rxq->rx_ring_phys_addr;
-
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDBAL(i),
-				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDBAH(i),
-				(uint32_t)(bus_addr >> 32));
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDLEN(i),
-				rxq->nb_rx_desc * sizeof(union yusur2_adv_rx_desc));
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDH(i), 0);
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDT(i), 0);
-
-
-		/* Configure the SRRCTL register */
-		srrctl = YUSUR2_SRRCTL_DESCTYPE_ADV_ONEBUF;
-
-		/* Set if packets are dropped when no descriptors available */
-		if (rxq->drop_en)
-			srrctl |= YUSUR2_SRRCTL_DROP_EN;
-
-		/*
-		 * Configure the RX buffer size in the BSIZEPACKET field of
-		 * the SRRCTL register of the queue.
-		 * The value is in 1 KB resolution. Valid values can be from
-		 * 1 KB to 16 KB.
-		 */
-		buf_size = (uint16_t)(rte_pktmbuf_data_room_size(rxq->mb_pool) -
-			RTE_PKTMBUF_HEADROOM);
-		srrctl |= ((buf_size >> YUSUR2_SRRCTL_BSIZEPKT_SHIFT) &
-			   YUSUR2_SRRCTL_BSIZEPKT_MASK);
-
-		/*
-		 * VF modification to write virtual function SRRCTL register
-		 */
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFSRRCTL(i), srrctl);
-
-		buf_size = (uint16_t) ((srrctl & YUSUR2_SRRCTL_BSIZEPKT_MASK) <<
-				       YUSUR2_SRRCTL_BSIZEPKT_SHIFT);
-
-		if (rxmode->offloads & DEV_RX_OFFLOAD_SCATTER ||
-		    /* It adds dual VLAN length for supporting dual VLAN */
-		    (rxmode->max_rx_pkt_len +
-				2 * YUSUR2_VLAN_TAG_SIZE) > buf_size) {
-			if (!dev->data->scattered_rx)
-				PMD_INIT_LOG(DEBUG, "forcing scatter mode");
-			dev->data->scattered_rx = 1;
-		}
-
-		if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
-			rxmode->offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
-	}
-
-	/* Set RQPL for VF RSS according to max Rx queue */
-	psrtype |= (dev->data->nb_rx_queues >> 1) <<
-		YUSUR2_PSRTYPE_RQPL_SHIFT;
-	YUSUR2_WRITE_REG(hw, YUSUR2_VFPSRTYPE, psrtype);
-
-	yusur2_set_rx_function(dev);
+	//TODO:
 
 	return 0;
 }
@@ -5606,39 +4397,7 @@ yusur2vf_dev_rx_init(struct rte_eth_dev *dev)
 void __attribute__((cold))
 yusur2vf_dev_tx_init(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw     *hw;
-	struct yusur2_tx_queue *txq;
-	uint64_t bus_addr;
-	uint32_t txctrl;
-	uint16_t i;
-
-	PMD_INIT_FUNC_TRACE();
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	/* Setup the Base and Length of the Tx Descriptor Rings */
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		txq = dev->data->tx_queues[i];
-		bus_addr = txq->tx_ring_phys_addr;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTDBAL(i),
-				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTDBAH(i),
-				(uint32_t)(bus_addr >> 32));
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTDLEN(i),
-				txq->nb_tx_desc * sizeof(union yusur2_adv_tx_desc));
-		/* Setup the HW Tx Head and TX Tail descriptor pointers */
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTDH(i), 0);
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTDT(i), 0);
-
-		/*
-		 * Disable Tx Head Writeback RO bit, since this hoses
-		 * bookkeeping if things aren't delivered in order.
-		 */
-		txctrl = YUSUR2_READ_REG(hw,
-				YUSUR2_VFDCA_TXCTRL(i));
-		txctrl &= ~YUSUR2_DCA_TXCTRL_DESC_WRO_EN;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFDCA_TXCTRL(i),
-				txctrl);
-	}
+	//TODO:
 }
 
 /*
@@ -5647,62 +4406,8 @@ yusur2vf_dev_tx_init(struct rte_eth_dev *dev)
 void __attribute__((cold))
 yusur2vf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw     *hw;
-	struct yusur2_tx_queue *txq;
-	struct yusur2_rx_queue *rxq;
-	uint32_t txdctl;
-	uint32_t rxdctl;
-	uint16_t i;
-	int poll_ms;
+	//TODO:
 
-	PMD_INIT_FUNC_TRACE();
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		txq = dev->data->tx_queues[i];
-		/* Setup Transmit Threshold Registers */
-		txdctl = YUSUR2_READ_REG(hw, YUSUR2_VFTXDCTL(i));
-		txdctl |= txq->pthresh & 0x7F;
-		txdctl |= ((txq->hthresh & 0x7F) << 8);
-		txdctl |= ((txq->wthresh & 0x7F) << 16);
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTXDCTL(i), txdctl);
-	}
-
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-
-		txdctl = YUSUR2_READ_REG(hw, YUSUR2_VFTXDCTL(i));
-		txdctl |= YUSUR2_TXDCTL_ENABLE;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFTXDCTL(i), txdctl);
-
-		poll_ms = 10;
-		/* Wait until TX Enable ready */
-		do {
-			rte_delay_ms(1);
-			txdctl = YUSUR2_READ_REG(hw, YUSUR2_VFTXDCTL(i));
-		} while (--poll_ms && !(txdctl & YUSUR2_TXDCTL_ENABLE));
-		if (!poll_ms)
-			PMD_INIT_LOG(ERR, "Could not enable Tx Queue %d", i);
-	}
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-
-		rxq = dev->data->rx_queues[i];
-
-		rxdctl = YUSUR2_READ_REG(hw, YUSUR2_VFRXDCTL(i));
-		rxdctl |= YUSUR2_RXDCTL_ENABLE;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRXDCTL(i), rxdctl);
-
-		/* Wait until RX Enable ready */
-		poll_ms = 10;
-		do {
-			rte_delay_ms(1);
-			rxdctl = YUSUR2_READ_REG(hw, YUSUR2_VFRXDCTL(i));
-		} while (--poll_ms && !(rxdctl & YUSUR2_RXDCTL_ENABLE));
-		if (!poll_ms)
-			PMD_INIT_LOG(ERR, "Could not enable Rx Queue %d", i);
-		rte_wmb();
-		YUSUR2_WRITE_REG(hw, YUSUR2_VFRDT(i), rxq->nb_rx_desc - 1);
-
-	}
 }
 
 int

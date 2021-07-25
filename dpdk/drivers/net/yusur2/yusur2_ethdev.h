@@ -8,13 +8,7 @@
 #include <stdint.h>
 
 #include "base/yusur2_type.h"
-#include "base/yusur2_dcb.h"
-#include "base/yusur2_dcb_82599.h"
-#include "base/yusur2_dcb_82598.h"
 #include "yusur2_bypass.h"
-#ifdef RTE_LIBRTE_SECURITY
-#include "yusur2_ipsec.h"
-#endif
 #include <rte_flow.h>
 #include <rte_time.h>
 #include <rte_hash.h>
@@ -85,7 +79,7 @@
 
 #define YUSUR2_ETQF_UP                   0x00070000 /* ethertype filter priority field */
 #define YUSUR2_ETQF_SHIFT                16
-#define YUSUR2_ETQF_UP_EN                0x00080000
+#define YUSUR2_ETQF_UP_EN                0x00080000©
 #define YUSUR2_ETQF_ETHERTYPE            0x0000FFFF /* ethertype filter ethertype field */
 #define YUSUR2_ETQF_MAX_PRI              7
 
@@ -133,17 +127,8 @@
 #define YUSUR2_MAX_FDIR_FILTER_NUM       (1024 * 32)
 #define YUSUR2_MAX_L2_TN_FILTER_NUM      128
 
-#define MAC_TYPE_FILTER_SUP_EXT(type)    do {\
-	if ((type) != yusur2_mac_82599EB && (type) != yusur2_mac_X540)\
-		return -ENOTSUP;\
-} while (0)
-
-#define MAC_TYPE_FILTER_SUP(type)    do {\
-	if ((type) != yusur2_mac_82599EB && (type) != yusur2_mac_X540 &&\
-		(type) != yusur2_mac_X550 && (type) != yusur2_mac_X550EM_x &&\
-		(type) != yusur2_mac_X550EM_a)\
-		return -ENOTSUP;\
-} while (0)
+#define MAC_TYPE_FILTER_SUP_EXT(type)
+#define MAC_TYPE_FILTER_SUP(type)
 
 /* Link speed for X550 auto negotiation */
 #define YUSUR2_LINK_SPEED_X550_AUTONEG	(YUSUR2_LINK_SPEED_100_FULL | \
@@ -483,7 +468,6 @@ struct yusur2_adapter {
 	struct yusur2_stat_mapping_registers stat_mappings;
 	struct yusur2_vfta           shadow_vfta;
 	struct yusur2_hwstrip		hwstrip;
-	struct yusur2_dcb_config     dcb_config;
 	struct yusur2_mirror_info    mr_data;
 	struct yusur2_vf_info        *vfdata;
 	struct yusur2_uta_info       uta_info;
@@ -493,9 +477,6 @@ struct yusur2_adapter {
 	struct yusur2_filter_info    filter;
 	struct yusur2_l2_tn_info     l2_tn;
 	struct yusur2_bw_conf        bw_conf;
-#ifdef RTE_LIBRTE_SECURITY
-	struct yusur2_ipsec          ipsec;
-#endif
 	bool rx_bulk_alloc_allowed;
 	bool rx_vec_allowed;
 	struct rte_timecounter      systime_tc;
@@ -550,9 +531,6 @@ int yusur2_vf_representor_uninit(struct rte_eth_dev *ethdev);
 
 #define YUSUR2_DEV_PRIVATE_TO_HWSTRIP_BITMAP(adapter) \
 	(&((struct yusur2_adapter *)adapter)->hwstrip)
-
-#define YUSUR2_DEV_PRIVATE_TO_DCB_CFG(adapter) \
-	(&((struct yusur2_adapter *)adapter)->dcb_config)
 
 #define YUSUR2_DEV_PRIVATE_TO_P_VFDATA(adapter) \
 	(&((struct yusur2_adapter *)adapter)->vfdata)
@@ -696,8 +674,6 @@ int yusur2_fdir_set_flexbytes_offset(struct rte_eth_dev *dev,
 int yusur2_fdir_filter_program(struct rte_eth_dev *dev,
 			      struct yusur2_fdir_rule *rule,
 			      bool del, bool update);
-
-void yusur2_configure_dcb(struct rte_eth_dev *dev);
 
 int
 yusur2_dev_link_update_share(struct rte_eth_dev *dev,

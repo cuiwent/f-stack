@@ -39,7 +39,6 @@
 
 #include "yusur2_logs.h"
 #include "base/yusur2_api.h"
-#include "base/yusur2_vf.h"
 #include "base/yusur2_common.h"
 #include "yusur2_ethdev.h"
 #include "yusur2_bypass.h"
@@ -73,7 +72,7 @@
 
 #define YUSUR2_MMW_SIZE_DEFAULT        0x4
 #define YUSUR2_MMW_SIZE_JUMBO_FRAME    0x14
-#define YUSUR2_MAX_RING_DESC           4096 /* replicate define from rxtx */
+#define YUSUR2_MAX_RING_DESC           8192 /* replicate define from rxtx */
 
 /*
  *  Default values for RX/TX configuration
@@ -239,7 +238,6 @@ static int yusur2_add_rar(struct rte_eth_dev *dev,
 static void yusur2_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static int yusur2_set_default_mac_addr(struct rte_eth_dev *dev,
 					   struct rte_ether_addr *mac_addr);
-static void yusur2_dcb_init(struct yusur2_hw *hw, struct yusur2_dcb_config *dcb_config);
 static bool is_device_supported(struct rte_eth_dev *dev,
 				struct rte_pci_driver *drv);
 
@@ -345,7 +343,6 @@ static int yusur2_get_module_info(struct rte_eth_dev *dev,
 static int yusur2_get_module_eeprom(struct rte_eth_dev *dev,
 				   struct rte_dev_eeprom_info *info);
 
-static int yusur2vf_get_reg_length(struct rte_eth_dev *dev);
 static int yusur2vf_get_regs(struct rte_eth_dev *dev,
 				struct rte_dev_reg_info *regs);
 
@@ -436,57 +433,7 @@ int yusur2_logtype_tx_free;
  * The set of PCI devices this driver supports
  */
 static const struct rte_pci_id pci_id_yusur2_map[] = {
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598_BX) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598AF_DUAL_PORT) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598AF_SINGLE_PORT) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598AT) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598AT2) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598EB_SFP_LOM) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598EB_CX4) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598_CX4_DUAL_PORT) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598_DA_DUAL_PORT) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598_SR_DUAL_PORT_EM) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82598EB_XF_LR) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_KX4) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_KX4_MEZZ) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_KR) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_COMBO_BACKPLANE) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_CX4) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_SFP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_BACKPLANE_FCOE) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_SFP_FCOE) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_SFP_EM) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_SFP_SF2) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_SFP_SF_QP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_QSFP_SF_QP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599EN_SFP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_XAUI_LOM) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_T3_LOM) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X540T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X540T1) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_SFP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_10G_T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_1G_T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550T1) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_KR) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_KR_L) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_SFP_N) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_SGMII) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_SGMII_L) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_10G_T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_QSFP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_QSFP_N) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_SFP) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_1G_T) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_1G_T_L) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_KX4) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_KR) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_XFI) },
-#ifdef RTE_LIBRTE_YUSUR2_BYPASS
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_BYPASS) },
-#endif
+	{ RTE_PCI_DEVICE(YUSUR2_YUSUR_VENDOR_ID, YUSUR2_DEV_ID_SN2100) },
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
@@ -494,16 +441,10 @@ static const struct rte_pci_id pci_id_yusur2_map[] = {
  * The set of PCI devices this driver supports (for 82599 VF)
  */
 static const struct rte_pci_id pci_id_yusur2vf_map[] = {
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_VF) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_82599_VF_HV) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X540_VF) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X540_VF_HV) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550_VF_HV) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550_VF) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_VF) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_A_VF_HV) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_VF) },
-	{ RTE_PCI_DEVICE(YUSUR2_INTEL_VENDOR_ID, YUSUR2_DEV_ID_X550EM_X_VF_HV) },
+//TODO: support vf...
+#if 0
+	{ RTE_PCI_DEVICE(YUSUR2_YUSUR_VENDOR_ID, YUSUR2_DEV_ID_SN2100_VF) },
+#endif
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
@@ -812,12 +753,6 @@ static const struct rte_yusur2_xstats_name_off rte_yusur2_txq_strings[] = {
 			   sizeof(rte_yusur2_txq_strings[0]))
 #define YUSUR2_NB_TXQ_PRIO_VALUES 8
 
-static const struct rte_yusur2_xstats_name_off rte_yusur2vf_stats_strings[] = {
-	{"rx_multicast_packets", offsetof(struct yusur2vf_hw_stats, vfmprc)},
-};
-
-#define YUSUR2VF_NB_XSTATS (sizeof(rte_yusur2vf_stats_strings) /	\
-		sizeof(rte_yusur2vf_stats_strings[0]))
 
 /*
  * This function is the same as yusur2_is_sfp() in base/yusur2.h.
@@ -845,7 +780,8 @@ yusur2_pf_reset_hw(struct yusur2_hw *hw)
 	int32_t status;
 
 	status = yusur2_reset_hw(hw);
-
+//TODO: need check...
+#if 0
 	ctrl_ext = YUSUR2_READ_REG(hw, YUSUR2_CTRL_EXT);
 	/* Set PF Reset Done bit so PF/VF Mail Ops can work */
 	ctrl_ext |= YUSUR2_CTRL_EXT_PFRSTD;
@@ -854,6 +790,7 @@ yusur2_pf_reset_hw(struct yusur2_hw *hw)
 
 	if (status == YUSUR2_ERR_SFP_NOT_PRESENT)
 		status = YUSUR2_SUCCESS;
+#endif
 	return status;
 }
 
@@ -876,15 +813,14 @@ static void
 yusur2_disable_intr(struct yusur2_hw *hw)
 {
 	PMD_INIT_FUNC_TRACE();
+#if 0
 
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		YUSUR2_WRITE_REG(hw, YUSUR2_EIMC, ~0);
-	} else {
-		YUSUR2_WRITE_REG(hw, YUSUR2_EIMC, 0xFFFF0000);
-		YUSUR2_WRITE_REG(hw, YUSUR2_EIMC_EX(0), ~0);
-		YUSUR2_WRITE_REG(hw, YUSUR2_EIMC_EX(1), ~0);
-	}
+	YUSUR2_WRITE_REG(hw, YUSUR2_EIMC, 0xFFFF0000);
+	YUSUR2_WRITE_REG(hw, YUSUR2_EIMC_EX(0), ~0);
+	YUSUR2_WRITE_REG(hw, YUSUR2_EIMC_EX(1), ~0);
+
 	YUSUR2_WRITE_FLUSH(hw);
+#endif
 }
 
 /*
@@ -911,67 +847,7 @@ yusur2_dev_queue_stats_mapping_set(struct rte_eth_dev *eth_dev,
 				  uint8_t stat_idx,
 				  uint8_t is_rx)
 {
-#define QSM_REG_NB_BITS_PER_QMAP_FIELD 8
-#define NB_QMAP_FIELDS_PER_QSM_REG 4
-#define QMAP_FIELD_RESERVED_BITS_MASK 0x0f
-
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
-	struct yusur2_stat_mapping_registers *stat_mappings =
-		YUSUR2_DEV_PRIVATE_TO_STAT_MAPPINGS(eth_dev->data->dev_private);
-	uint32_t qsmr_mask = 0;
-	uint32_t clearing_mask = QMAP_FIELD_RESERVED_BITS_MASK;
-	uint32_t q_map;
-	uint8_t n, offset;
-
-	if ((hw->mac.type != yusur2_mac_82599EB) &&
-		(hw->mac.type != yusur2_mac_X540) &&
-		(hw->mac.type != yusur2_mac_X550) &&
-		(hw->mac.type != yusur2_mac_X550EM_x) &&
-		(hw->mac.type != yusur2_mac_X550EM_a))
-		return -ENOSYS;
-
-	PMD_INIT_LOG(DEBUG, "Setting port %d, %s queue_id %d to stat index %d",
-		     (int)(eth_dev->data->port_id), is_rx ? "RX" : "TX",
-		     queue_id, stat_idx);
-
-	n = (uint8_t)(queue_id / NB_QMAP_FIELDS_PER_QSM_REG);
-	if (n >= YUSUR2_NB_STAT_MAPPING_REGS) {
-		PMD_INIT_LOG(ERR, "Nb of stat mapping registers exceeded");
-		return -EIO;
-	}
-	offset = (uint8_t)(queue_id % NB_QMAP_FIELDS_PER_QSM_REG);
-
-	/* Now clear any previous stat_idx set */
-	clearing_mask <<= (QSM_REG_NB_BITS_PER_QMAP_FIELD * offset);
-	if (!is_rx)
-		stat_mappings->tqsm[n] &= ~clearing_mask;
-	else
-		stat_mappings->rqsmr[n] &= ~clearing_mask;
-
-	q_map = (uint32_t)stat_idx;
-	q_map &= QMAP_FIELD_RESERVED_BITS_MASK;
-	qsmr_mask = q_map << (QSM_REG_NB_BITS_PER_QMAP_FIELD * offset);
-	if (!is_rx)
-		stat_mappings->tqsm[n] |= qsmr_mask;
-	else
-		stat_mappings->rqsmr[n] |= qsmr_mask;
-
-	PMD_INIT_LOG(DEBUG, "Set port %d, %s queue_id %d to stat index %d",
-		     (int)(eth_dev->data->port_id), is_rx ? "RX" : "TX",
-		     queue_id, stat_idx);
-	PMD_INIT_LOG(DEBUG, "%s[%d] = 0x%08x", is_rx ? "RQSMR" : "TQSM", n,
-		     is_rx ? stat_mappings->rqsmr[n] : stat_mappings->tqsm[n]);
-
-	/* Now write the mapping in the appropriate register */
-	if (is_rx) {
-		PMD_INIT_LOG(DEBUG, "Write 0x%x to RX YUSUR2 stat mapping reg:%d",
-			     stat_mappings->rqsmr[n], n);
-		YUSUR2_WRITE_REG(hw, YUSUR2_RQSMR(n), stat_mappings->rqsmr[n]);
-	} else {
-		PMD_INIT_LOG(DEBUG, "Write 0x%x to TX YUSUR2 stat mapping reg:%d",
-			     stat_mappings->tqsm[n], n);
-		YUSUR2_WRITE_REG(hw, YUSUR2_TQSM(n), stat_mappings->tqsm[n]);
-	}
+	//TODO: check
 	return 0;
 }
 
@@ -993,57 +869,14 @@ yusur2_restore_statistics_mapping(struct rte_eth_dev *dev)
 	}
 }
 
-static void
-yusur2_dcb_init(struct yusur2_hw *hw, struct yusur2_dcb_config *dcb_config)
-{
-	uint8_t i;
-	struct yusur2_dcb_tc_config *tc;
-	uint8_t dcb_max_tc = YUSUR2_DCB_MAX_TRAFFIC_CLASS;
-
-	dcb_config->num_tcs.pg_tcs = dcb_max_tc;
-	dcb_config->num_tcs.pfc_tcs = dcb_max_tc;
-	for (i = 0; i < dcb_max_tc; i++) {
-		tc = &dcb_config->tc_config[i];
-		tc->path[YUSUR2_DCB_TX_CONFIG].bwg_id = i;
-		tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent =
-				 (uint8_t)(100/dcb_max_tc + (i & 1));
-		tc->path[YUSUR2_DCB_RX_CONFIG].bwg_id = i;
-		tc->path[YUSUR2_DCB_RX_CONFIG].bwg_percent =
-				 (uint8_t)(100/dcb_max_tc + (i & 1));
-		tc->pfc = yusur2_dcb_pfc_disabled;
-	}
-
-	/* Initialize default user to priority mapping, UPx->TC0 */
-	tc = &dcb_config->tc_config[0];
-	tc->path[YUSUR2_DCB_TX_CONFIG].up_to_tc_bitmap = 0xFF;
-	tc->path[YUSUR2_DCB_RX_CONFIG].up_to_tc_bitmap = 0xFF;
-	for (i = 0; i < YUSUR2_DCB_MAX_BW_GROUP; i++) {
-		dcb_config->bw_percentage[YUSUR2_DCB_TX_CONFIG][i] = 100;
-		dcb_config->bw_percentage[YUSUR2_DCB_RX_CONFIG][i] = 100;
-	}
-	dcb_config->rx_pba_cfg = yusur2_dcb_pba_equal;
-	dcb_config->pfc_mode_enable = false;
-	dcb_config->vt_mode = true;
-	dcb_config->round_robin_enable = false;
-	/* support all DCB capabilities in 82599 */
-	dcb_config->support.capabilities = 0xFF;
-
-	/*we only support 4 Tcs for X540, X550 */
-	if (hw->mac.type == yusur2_mac_X540 ||
-		hw->mac.type == yusur2_mac_X550 ||
-		hw->mac.type == yusur2_mac_X550EM_x ||
-		hw->mac.type == yusur2_mac_X550EM_a) {
-		dcb_config->num_tcs.pg_tcs = 4;
-		dcb_config->num_tcs.pfc_tcs = 4;
-	}
-}
-
 /*
  * Ensure that all locks are released before first NVM or PHY access
  */
 static void
 yusur2_swfw_lock_reset(struct yusur2_hw *hw)
 {
+//TODO:
+#if 0
 	uint16_t mask;
 
 	/*
@@ -1069,6 +902,7 @@ yusur2_swfw_lock_reset(struct yusur2_hw *hw)
 		PMD_DRV_LOG(DEBUG, "SWFW common locks released");
 	}
 	yusur2_release_swfw_semaphore(hw, mask);
+#endif
 }
 
 /*
@@ -1087,8 +921,6 @@ eth_yusur2_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		YUSUR2_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
 	struct yusur2_hwstrip *hwstrip =
 		YUSUR2_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
-	struct yusur2_dcb_config *dcb_config =
-		YUSUR2_DEV_PRIVATE_TO_DCB_CFG(eth_dev->data->dev_private);
 	struct yusur2_filter_info *filter_info =
 		YUSUR2_DEV_PRIVATE_TO_FILTER_INFO(eth_dev->data->dev_private);
 	struct yusur2_bw_conf *bw_conf =
@@ -1139,12 +971,7 @@ eth_yusur2_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
 	hw->allow_unsupported_sfp = 1;
 
-	/* Initialize the shared code (base driver) */
-#ifdef RTE_LIBRTE_YUSUR2_BYPASS
-	diag = yusur2_bypass_init_shared_code(hw);
-#else
 	diag = yusur2_init_shared_code(hw);
-#endif /* RTE_LIBRTE_YUSUR2_BYPASS */
 
 	if (diag != YUSUR2_SUCCESS) {
 		PMD_INIT_LOG(ERR, "Shared code init failed: %d", diag);
@@ -1165,15 +992,6 @@ eth_yusur2_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	/* Unlock any pending hardware semaphore */
 	yusur2_swfw_lock_reset(hw);
 
-#ifdef RTE_LIBRTE_SECURITY
-	/* Initialize security_ctx only for primary process*/
-	if (yusur2_ipsec_ctx_create(eth_dev))
-		return -ENOMEM;
-#endif
-
-	/* Initialize DCB configuration*/
-	memset(dcb_config, 0, sizeof(struct yusur2_dcb_config));
-	yusur2_dcb_init(hw, dcb_config);
 	/* Get Hardware Flow Control setting */
 	hw->fc.requested_mode = yusur2_fc_none;
 	hw->fc.current_mode = yusur2_fc_none;
@@ -1191,11 +1009,7 @@ eth_yusur2_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		return -EIO;
 	}
 
-#ifdef RTE_LIBRTE_YUSUR2_BYPASS
-	diag = yusur2_bypass_init_hw(hw);
-#else
 	diag = yusur2_init_hw(hw);
-#endif /* RTE_LIBRTE_YUSUR2_BYPASS */
 
 	/*
 	 * Devices with copper phys will fail to initialise if yusur2_init_hw()
@@ -1324,9 +1138,6 @@ eth_yusur2_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 
 	/* initialize l2 tunnel filter list & hash */
 	yusur2_l2_tn_filter_init(eth_dev);
-
-	/* initialize flow filter lists */
-	yusur2_filterlist_init();
 
 	/* initialize bandwidth configuration info */
 	memset(bw_conf, 0, sizeof(struct yusur2_bw_conf));
@@ -1483,32 +1294,6 @@ static int yusur2_l2_tn_filter_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 }
-/*
- * Negotiate mailbox API version with the PF.
- * After reset API version is always set to the basic one (yusur2_mbox_api_10).
- * Then we try to negotiate starting with the most recent one.
- * If all negotiation attempts fail, then we will proceed with
- * the default one (yusur2_mbox_api_10).
- */
-static void
-yusur2vf_negotiate_api(struct yusur2_hw *hw)
-{
-	int32_t i;
-
-	/* start with highest supported, proceed down */
-	static const enum yusur2_pfvf_api_rev sup_ver[] = {
-		yusur2_mbox_api_13,
-		yusur2_mbox_api_12,
-		yusur2_mbox_api_11,
-		yusur2_mbox_api_10,
-	};
-
-	for (i = 0;
-			i != RTE_DIM(sup_ver) &&
-			yusur2vf_negotiate_api_version(hw, sup_ver[i]) != 0;
-			i++)
-		;
-}
 
 static void
 generate_random_mac_addr(struct rte_ether_addr *mac_addr)
@@ -1571,164 +1356,7 @@ yusur2vf_parse_devargs(struct yusur2_adapter *adapter,
 static int
 eth_yusur2vf_dev_init(struct rte_eth_dev *eth_dev)
 {
-	int diag;
-	uint32_t tc, tcs;
-	struct yusur2_adapter *ad = eth_dev->data->dev_private;
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
-	struct yusur2_vfta *shadow_vfta =
-		YUSUR2_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
-	struct yusur2_hwstrip *hwstrip =
-		YUSUR2_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
-	struct rte_ether_addr *perm_addr =
-		(struct rte_ether_addr *)hw->mac.perm_addr;
-
-	PMD_INIT_FUNC_TRACE();
-
-	eth_dev->dev_ops = &yusur2vf_eth_dev_ops;
-	eth_dev->rx_pkt_burst = &yusur2_recv_pkts;
-	eth_dev->tx_pkt_burst = &yusur2_xmit_pkts;
-
-	/* for secondary processes, we don't initialise any further as primary
-	 * has already done this work. Only check we don't need a different
-	 * RX function
-	 */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
-		struct yusur2_tx_queue *txq;
-		/* TX queue function in primary, set by last queue initialized
-		 * Tx queue may not initialized by primary process
-		 */
-		if (eth_dev->data->tx_queues) {
-			txq = eth_dev->data->tx_queues[eth_dev->data->nb_tx_queues - 1];
-			yusur2_set_tx_function(eth_dev, txq);
-		} else {
-			/* Use default TX function if we get here */
-			PMD_INIT_LOG(NOTICE,
-				     "No TX queues configured yet. Using default TX function.");
-		}
-
-		yusur2_set_rx_function(eth_dev);
-
-		return 0;
-	}
-
-	rte_atomic32_clear(&ad->link_thread_running);
-	yusur2vf_parse_devargs(eth_dev->data->dev_private,
-			      pci_dev->device.devargs);
-
-	rte_eth_copy_pci_info(eth_dev, pci_dev);
-
-	hw->device_id = pci_dev->id.device_id;
-	hw->vendor_id = pci_dev->id.vendor_id;
-	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
-
-	/* initialize the vfta */
-	memset(shadow_vfta, 0, sizeof(*shadow_vfta));
-
-	/* initialize the hw strip bitmap*/
-	memset(hwstrip, 0, sizeof(*hwstrip));
-
-	/* Initialize the shared code (base driver) */
-	diag = yusur2_init_shared_code(hw);
-	if (diag != YUSUR2_SUCCESS) {
-		PMD_INIT_LOG(ERR, "Shared code init failed for yusur2vf: %d", diag);
-		return -EIO;
-	}
-
-	/* init_mailbox_params */
-	hw->mbx.ops.init_params(hw);
-
-	/* Reset the hw statistics */
-	yusur2vf_dev_stats_reset(eth_dev);
-
-	/* Disable the interrupts for VF */
-	yusur2vf_intr_disable(eth_dev);
-
-	hw->mac.num_rar_entries = 128; /* The MAX of the underlying PF */
-	diag = hw->mac.ops.reset_hw(hw);
-
-	/*
-	 * The VF reset operation returns the YUSUR2_ERR_INVALID_MAC_ADDR when
-	 * the underlying PF driver has not assigned a MAC address to the VF.
-	 * In this case, assign a random MAC address.
-	 */
-	if ((diag != YUSUR2_SUCCESS) && (diag != YUSUR2_ERR_INVALID_MAC_ADDR)) {
-		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
-		/*
-		 * This error code will be propagated to the app by
-		 * rte_eth_dev_reset, so use a public error code rather than
-		 * the internal-only YUSUR2_ERR_RESET_FAILED
-		 */
-		return -EAGAIN;
-	}
-
-	/* negotiate mailbox API version to use with the PF. */
-	yusur2vf_negotiate_api(hw);
-
-	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
-	yusur2vf_get_queues(hw, &tcs, &tc);
-
-	/* Allocate memory for storing MAC addresses */
-	eth_dev->data->mac_addrs = rte_zmalloc("yusur2vf", RTE_ETHER_ADDR_LEN *
-					       hw->mac.num_rar_entries, 0);
-	if (eth_dev->data->mac_addrs == NULL) {
-		PMD_INIT_LOG(ERR,
-			     "Failed to allocate %u bytes needed to store "
-			     "MAC addresses",
-			     RTE_ETHER_ADDR_LEN * hw->mac.num_rar_entries);
-		return -ENOMEM;
-	}
-
-	/* Pass the information to the rte_eth_dev_close() that it should also
-	 * release the private port resources.
-	 */
-	eth_dev->data->dev_flags |= RTE_ETH_DEV_CLOSE_REMOVE;
-
-	/* Generate a random MAC address, if none was assigned by PF. */
-	if (rte_is_zero_ether_addr(perm_addr)) {
-		generate_random_mac_addr(perm_addr);
-		diag = yusur2_set_rar_vf(hw, 1, perm_addr->addr_bytes, 0, 1);
-		if (diag) {
-			rte_free(eth_dev->data->mac_addrs);
-			eth_dev->data->mac_addrs = NULL;
-			return diag;
-		}
-		PMD_INIT_LOG(INFO, "\tVF MAC address not assigned by Host PF");
-		PMD_INIT_LOG(INFO, "\tAssign randomly generated MAC address "
-			     "%02x:%02x:%02x:%02x:%02x:%02x",
-			     perm_addr->addr_bytes[0],
-			     perm_addr->addr_bytes[1],
-			     perm_addr->addr_bytes[2],
-			     perm_addr->addr_bytes[3],
-			     perm_addr->addr_bytes[4],
-			     perm_addr->addr_bytes[5]);
-	}
-
-	/* Copy the permanent MAC address */
-	rte_ether_addr_copy(perm_addr, &eth_dev->data->mac_addrs[0]);
-
-	/* reset the hardware with the new settings */
-	diag = hw->mac.ops.start_hw(hw);
-	switch (diag) {
-	case  0:
-		break;
-
-	default:
-		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
-		return -EIO;
-	}
-
-	rte_intr_callback_register(intr_handle,
-				   yusur2vf_dev_interrupt_handler, eth_dev);
-	rte_intr_enable(intr_handle);
-	yusur2vf_intr_enable(eth_dev);
-
-	PMD_INIT_LOG(DEBUG, "port %d vendorID=0x%x deviceID=0x%x mac.type=%s",
-		     eth_dev->data->port_id, pci_dev->id.vendor_id,
-		     pci_dev->id.device_id, "yusur2_mac_82599_vf");
-
+	//TODO: support vf...haha
 	return 0;
 }
 
@@ -1776,36 +1404,37 @@ eth_yusur2_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	if (pf_ethdev == NULL)
 		return -ENODEV;
 
+	//TODO: support VF representor...
 	/* probe VF representor ports */
-	for (i = 0; i < eth_da.nb_representor_ports; i++) {
-		struct yusur2_vf_info *vfinfo;
-		struct yusur2_vf_representor representor;
+	// for (i = 0; i < eth_da.nb_representor_ports; i++) {
+	// 	struct yusur2_vf_info *vfinfo;
+	// 	struct yusur2_vf_representor representor;
 
-		vfinfo = *YUSUR2_DEV_PRIVATE_TO_P_VFDATA(
-			pf_ethdev->data->dev_private);
-		if (vfinfo == NULL) {
-			PMD_DRV_LOG(ERR,
-				"no virtual functions supported by PF");
-			break;
-		}
+	// 	vfinfo = *YUSUR2_DEV_PRIVATE_TO_P_VFDATA(
+	// 		pf_ethdev->data->dev_private);
+	// 	if (vfinfo == NULL) {
+	// 		PMD_DRV_LOG(ERR,
+	// 			"no virtual functions supported by PF");
+	// 		break;
+	// 	}
 
-		representor.vf_id = eth_da.representor_ports[i];
-		representor.switch_domain_id = vfinfo->switch_domain_id;
-		representor.pf_ethdev = pf_ethdev;
+	// 	representor.vf_id = eth_da.representor_ports[i];
+	// 	representor.switch_domain_id = vfinfo->switch_domain_id;
+	// 	representor.pf_ethdev = pf_ethdev;
 
-		/* representor port net_bdf_port */
-		snprintf(name, sizeof(name), "net_%s_representor_%d",
-			pci_dev->device.name,
-			eth_da.representor_ports[i]);
+	// 	/* representor port net_bdf_port */
+	// 	snprintf(name, sizeof(name), "net_%s_representor_%d",
+	// 		pci_dev->device.name,
+	// 		eth_da.representor_ports[i]);
 
-		retval = rte_eth_dev_create(&pci_dev->device, name,
-			sizeof(struct yusur2_vf_representor), NULL, NULL,
-			yusur2_vf_representor_init, &representor);
+	// 	retval = rte_eth_dev_create(&pci_dev->device, name,
+	// 		sizeof(struct yusur2_vf_representor), NULL, NULL,
+	// 		yusur2_vf_representor_init, &representor);
 
-		if (retval)
-			PMD_DRV_LOG(ERR, "failed to create yusur2 vf "
-				"representor %s.", name);
-	}
+	// 	if (retval)
+	// 		PMD_DRV_LOG(ERR, "failed to create yusur2 vf "
+	// 			"representor %s.", name);
+	// }
 
 	return 0;
 }
@@ -1817,13 +1446,13 @@ static int eth_yusur2_pci_remove(struct rte_pci_device *pci_dev)
 	ethdev = rte_eth_dev_allocated(pci_dev->device.name);
 	if (!ethdev)
 		return 0;
-
-	if (ethdev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)
-		return rte_eth_dev_pci_generic_remove(pci_dev,
-					yusur2_vf_representor_uninit);
-	else
-		return rte_eth_dev_pci_generic_remove(pci_dev,
-						eth_yusur2_dev_uninit);
+	//TODO: support vf...
+	// if (ethdev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)
+	// 	return rte_eth_dev_pci_generic_remove(pci_dev,
+	// 				yusur2_vf_representor_uninit);
+	// else
+	return rte_eth_dev_pci_generic_remove(pci_dev,
+					eth_yusur2_dev_uninit);
 }
 
 static struct rte_pci_driver rte_yusur2_pmd = {
@@ -2023,12 +1652,6 @@ yusur2_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 
 	PMD_INIT_FUNC_TRACE();
 
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		/* No queue level support */
-		PMD_INIT_LOG(NOTICE, "82598EB not support queue level hw strip");
-		return;
-	}
-
 	/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 	ctrl = YUSUR2_READ_REG(hw, YUSUR2_RXDCTL(queue));
 	ctrl &= ~YUSUR2_RXDCTL_VME;
@@ -2041,17 +1664,13 @@ yusur2_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 static void
 yusur2_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
 {
+	//TODO: support
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t ctrl;
 
 	PMD_INIT_FUNC_TRACE();
-
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		/* No queue level supported */
-		PMD_INIT_LOG(NOTICE, "82598EB not support queue level hw strip");
-		return;
-	}
 
 	/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 	ctrl = YUSUR2_READ_REG(hw, YUSUR2_RXDCTL(queue));
@@ -2060,11 +1679,14 @@ yusur2_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
 
 	/* record those setting for HW strip per queue */
 	yusur2_vlan_hw_strip_bitmap_set(dev, queue, 1);
+#endif
 }
 
 static void
 yusur2_vlan_hw_extend_disable(struct rte_eth_dev *dev)
 {
+//TODO: support
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t ctrl;
@@ -2080,12 +1702,14 @@ yusur2_vlan_hw_extend_disable(struct rte_eth_dev *dev)
 	ctrl = YUSUR2_READ_REG(hw, YUSUR2_CTRL_EXT);
 	ctrl &= ~YUSUR2_EXTENDED_VLAN;
 	YUSUR2_WRITE_REG(hw, YUSUR2_CTRL_EXT, ctrl);
-
+#endif
 }
 
 static void
 yusur2_vlan_hw_extend_enable(struct rte_eth_dev *dev)
 {
+//TODO:
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t ctrl;
@@ -2102,24 +1726,19 @@ yusur2_vlan_hw_extend_enable(struct rte_eth_dev *dev)
 	ctrl |= YUSUR2_EXTENDED_VLAN;
 	YUSUR2_WRITE_REG(hw, YUSUR2_CTRL_EXT, ctrl);
 
-	/* Clear pooling mode of PFVTCTL. It's required by X550. */
-	if (hw->mac.type == yusur2_mac_X550 ||
-	    hw->mac.type == yusur2_mac_X550EM_x ||
-	    hw->mac.type == yusur2_mac_X550EM_a) {
-		ctrl = YUSUR2_READ_REG(hw, YUSUR2_VT_CTL);
-		ctrl &= ~YUSUR2_VT_CTL_POOLING_MODE_MASK;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, ctrl);
-	}
 
 	/*
 	 * VET EXT field in the EXVET register = 0x8100 by default
 	 * So no need to change. Same to VT field of DMATXCTL register
 	 */
+#endif
 }
 
 void
 yusur2_vlan_hw_strip_config(struct rte_eth_dev *dev)
 {
+//TODO:
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
@@ -2130,37 +1749,27 @@ yusur2_vlan_hw_strip_config(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) {
-			ctrl = YUSUR2_READ_REG(hw, YUSUR2_VLNCTRL);
-			ctrl |= YUSUR2_VLNCTRL_VME;
-			YUSUR2_WRITE_REG(hw, YUSUR2_VLNCTRL, ctrl);
-		} else {
-			ctrl = YUSUR2_READ_REG(hw, YUSUR2_VLNCTRL);
-			ctrl &= ~YUSUR2_VLNCTRL_VME;
-			YUSUR2_WRITE_REG(hw, YUSUR2_VLNCTRL, ctrl);
-		}
-	} else {
-		/*
-		 * Other 10G NIC, the VLAN strip can be setup
-		 * per queue in RXDCTL
-		 */
-		for (i = 0; i < dev->data->nb_rx_queues; i++) {
-			rxq = dev->data->rx_queues[i];
-			ctrl = YUSUR2_READ_REG(hw, YUSUR2_RXDCTL(rxq->reg_idx));
-			if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) {
-				ctrl |= YUSUR2_RXDCTL_VME;
-				on = TRUE;
-			} else {
-				ctrl &= ~YUSUR2_RXDCTL_VME;
-				on = FALSE;
-			}
-			YUSUR2_WRITE_REG(hw, YUSUR2_RXDCTL(rxq->reg_idx), ctrl);
 
-			/* record those setting for HW strip per queue */
-			yusur2_vlan_hw_strip_bitmap_set(dev, i, on);
+	/*
+		* Other 10G NIC, the VLAN strip can be setup
+		* per queue in RXDCTL
+		*/
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		ctrl = YUSUR2_READ_REG(hw, YUSUR2_RXDCTL(rxq->reg_idx));
+		if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) {
+			ctrl |= YUSUR2_RXDCTL_VME;
+			on = TRUE;
+		} else {
+			ctrl &= ~YUSUR2_RXDCTL_VME;
+			on = FALSE;
 		}
+		YUSUR2_WRITE_REG(hw, YUSUR2_RXDCTL(rxq->reg_idx), ctrl);
+
+		/* record those setting for HW strip per queue */
+		yusur2_vlan_hw_strip_bitmap_set(dev, i, on);
 	}
+#endif
 }
 
 static void
@@ -2261,6 +1870,8 @@ yusur2_check_vf_rss_rxq_num(struct rte_eth_dev *dev, uint16_t nb_rx_q)
 static int
 yusur2_check_mq_mode(struct rte_eth_dev *dev)
 {
+//TODO: multi-queue support...
+#if 0
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t nb_rx_q = dev->data->nb_rx_queues;
@@ -2408,6 +2019,7 @@ yusur2_check_mq_mode(struct rte_eth_dev *dev)
 			}
 		}
 	}
+#endif
 	return 0;
 }
 
@@ -2421,8 +2033,10 @@ yusur2_dev_configure(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
-		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+	//TODO:RSS support
+
+	// if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
+	// 	dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
 
 	/* multipe queue mode checking */
 	ret  = yusur2_check_mq_mode(dev);
@@ -2448,6 +2062,8 @@ yusur2_dev_configure(struct rte_eth_dev *dev)
 static void
 yusur2_dev_phy_intr_setup(struct rte_eth_dev *dev)
 {
+//TODO: support
+#if 0
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct yusur2_interrupt *intr =
@@ -2462,6 +2078,7 @@ yusur2_dev_phy_intr_setup(struct rte_eth_dev *dev)
 		if (hw->phy.type == yusur2_phy_x550em_ext_t)
 			intr->mask |= YUSUR2_EICR_GPI_SDP0_X550EM_x;
 	}
+#endif
 }
 
 int
@@ -2679,15 +2296,6 @@ yusur2_dev_start(struct rte_eth_dev *dev)
 		yusur2_vmdq_vlan_hw_filter_enable(dev);
 	}
 
-	/* Configure DCB hw */
-	yusur2_configure_dcb(dev);
-
-	if (dev->data->dev_conf.fdir_conf.mode != RTE_FDIR_MODE_NONE) {
-		err = yusur2_fdir_configure(dev);
-		if (err)
-			goto error;
-	}
-
 	/* Restore vf rate limit */
 	if (vfinfo != NULL) {
 		for (vf = 0; vf < pci_dev->max_vfs; vf++)
@@ -2747,22 +2355,9 @@ yusur2_dev_start(struct rte_eth_dev *dev)
 	if (err)
 		goto error;
 
-	switch (hw->mac.type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		allowed_speeds = ETH_LINK_SPEED_100M | ETH_LINK_SPEED_1G |
-			ETH_LINK_SPEED_2_5G |  ETH_LINK_SPEED_5G |
-			ETH_LINK_SPEED_10G;
-		if (hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T ||
-				hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T_L)
-			allowed_speeds = ETH_LINK_SPEED_10M |
-				ETH_LINK_SPEED_100M | ETH_LINK_SPEED_1G;
-		break;
-	default:
-		allowed_speeds = ETH_LINK_SPEED_100M | ETH_LINK_SPEED_1G |
-			ETH_LINK_SPEED_10G;
-	}
+	//TODO: check...
+	allowed_speeds = ETH_LINK_SPEED_100M | ETH_LINK_SPEED_1G |
+		ETH_LINK_SPEED_10G;
 
 	link_speeds = &dev->data->dev_conf.link_speeds;
 
@@ -2774,37 +2369,14 @@ yusur2_dev_start(struct rte_eth_dev *dev)
 		goto error;
 	}
 
+	//TODO: link speed check...
 	speed = 0x0;
 	if (*link_speeds == ETH_LINK_SPEED_AUTONEG) {
-		switch (hw->mac.type) {
-		case yusur2_mac_82598EB:
-			speed = YUSUR2_LINK_SPEED_82598_AUTONEG;
-			break;
-		case yusur2_mac_82599EB:
-		case yusur2_mac_X540:
-			speed = YUSUR2_LINK_SPEED_82599_AUTONEG;
-			break;
-		case yusur2_mac_X550:
-		case yusur2_mac_X550EM_x:
-		case yusur2_mac_X550EM_a:
-			speed = YUSUR2_LINK_SPEED_X550_AUTONEG;
-			break;
-		default:
-			speed = YUSUR2_LINK_SPEED_82599_AUTONEG;
-		}
+
+		speed = YUSUR2_LINK_SPEED_82599_AUTONEG;
+
 	} else {
-		if (*link_speeds & ETH_LINK_SPEED_10G)
-			speed |= YUSUR2_LINK_SPEED_10GB_FULL;
-		if (*link_speeds & ETH_LINK_SPEED_5G)
-			speed |= YUSUR2_LINK_SPEED_5GB_FULL;
-		if (*link_speeds & ETH_LINK_SPEED_2_5G)
-			speed |= YUSUR2_LINK_SPEED_2_5GB_FULL;
-		if (*link_speeds & ETH_LINK_SPEED_1G)
-			speed |= YUSUR2_LINK_SPEED_1GB_FULL;
-		if (*link_speeds & ETH_LINK_SPEED_100M)
-			speed |= YUSUR2_LINK_SPEED_100_FULL;
-		if (*link_speeds & ETH_LINK_SPEED_10M)
-			speed |= YUSUR2_LINK_SPEED_10_FULL;
+		speed |= YUSUR2_LINK_SPEED_10GB_FULL;
 	}
 
 	err = yusur2_setup_link(hw, speed, link_up);
@@ -2907,13 +2479,8 @@ yusur2_dev_stop(struct rte_eth_dev *dev)
 	for (vf = 0; vfinfo != NULL && vf < pci_dev->max_vfs; vf++)
 		vfinfo[vf].clear_to_send = false;
 
-	if (hw->mac.ops.get_media_type(hw) == yusur2_media_type_copper) {
-		/* Turn off the copper */
-		yusur2_set_phy_power(hw, false);
-	} else {
-		/* Turn off the laser */
-		yusur2_disable_tx_laser(hw);
-	}
+	/* Turn off the laser */
+	yusur2_disable_tx_laser(hw);
 
 	yusur2_dev_clear_queues(dev);
 
@@ -2954,25 +2521,10 @@ yusur2_dev_set_link_up(struct rte_eth_dev *dev)
 {
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	if (hw->mac.type == yusur2_mac_82599EB) {
-#ifdef RTE_LIBRTE_YUSUR2_BYPASS
-		if (hw->device_id == YUSUR2_DEV_ID_82599_BYPASS) {
-			/* Not suported in bypass mode */
-			PMD_INIT_LOG(ERR, "Set link up is not supported "
-				     "by device id 0x%x", hw->device_id);
-			return -ENOTSUP;
-		}
-#endif
-	}
 
-	if (hw->mac.ops.get_media_type(hw) == yusur2_media_type_copper) {
-		/* Turn on the copper */
-		yusur2_set_phy_power(hw, true);
-	} else {
-		/* Turn on the laser */
-		yusur2_enable_tx_laser(hw);
-		yusur2_dev_link_update(dev, 0);
-	}
+	/* Turn on the laser */
+	yusur2_enable_tx_laser(hw);
+	yusur2_dev_link_update(dev, 0);
 
 	return 0;
 }
@@ -2985,25 +2537,10 @@ yusur2_dev_set_link_down(struct rte_eth_dev *dev)
 {
 	struct yusur2_hw *hw =
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	if (hw->mac.type == yusur2_mac_82599EB) {
-#ifdef RTE_LIBRTE_YUSUR2_BYPASS
-		if (hw->device_id == YUSUR2_DEV_ID_82599_BYPASS) {
-			/* Not suported in bypass mode */
-			PMD_INIT_LOG(ERR, "Set link down is not supported "
-				     "by device id 0x%x", hw->device_id);
-			return -ENOTSUP;
-		}
-#endif
-	}
 
-	if (hw->mac.ops.get_media_type(hw) == yusur2_media_type_copper) {
-		/* Turn off the copper */
-		yusur2_set_phy_power(hw, false);
-	} else {
-		/* Turn off the laser */
-		yusur2_disable_tx_laser(hw);
-		yusur2_dev_link_update(dev, 0);
-	}
+	/* Turn off the laser */
+	yusur2_disable_tx_laser(hw);
+	yusur2_dev_link_update(dev, 0);
 
 	return 0;
 }
@@ -3072,9 +2609,6 @@ yusur2_dev_close(struct rte_eth_dev *dev)
 	/* Remove all ntuple filters of the device */
 	yusur2_ntuple_filter_uninit(dev);
 
-	/* clear all the filters list */
-	yusur2_filterlist_flush();
-
 	/* Remove all Traffic Manager configuration */
 	yusur2_tm_conf_uninit(dev);
 
@@ -3117,215 +2651,7 @@ yusur2_read_stats_registers(struct yusur2_hw *hw,
 			   uint64_t *total_missed_rx, uint64_t *total_qbrc,
 			   uint64_t *total_qprc, uint64_t *total_qprdc)
 {
-	uint32_t bprc, lxon, lxoff, total;
-	uint32_t delta_gprc = 0;
-	unsigned i;
-	/* Workaround for RX byte count not including CRC bytes when CRC
-	 * strip is enabled. CRC bytes are removed from counters when crc_strip
-	 * is disabled.
-	 */
-	int crc_strip = (YUSUR2_READ_REG(hw, YUSUR2_HLREG0) &
-			YUSUR2_HLREG0_RXCRCSTRP);
-
-	hw_stats->crcerrs += YUSUR2_READ_REG(hw, YUSUR2_CRCERRS);
-	hw_stats->illerrc += YUSUR2_READ_REG(hw, YUSUR2_ILLERRC);
-	hw_stats->errbc += YUSUR2_READ_REG(hw, YUSUR2_ERRBC);
-	hw_stats->mspdc += YUSUR2_READ_REG(hw, YUSUR2_MSPDC);
-
-	for (i = 0; i < 8; i++) {
-		uint32_t mp = YUSUR2_READ_REG(hw, YUSUR2_MPC(i));
-
-		/* global total per queue */
-		hw_stats->mpc[i] += mp;
-		/* Running comprehensive total for stats display */
-		*total_missed_rx += hw_stats->mpc[i];
-		if (hw->mac.type == yusur2_mac_82598EB) {
-			hw_stats->rnbc[i] +=
-			    YUSUR2_READ_REG(hw, YUSUR2_RNBC(i));
-			hw_stats->pxonrxc[i] +=
-				YUSUR2_READ_REG(hw, YUSUR2_PXONRXC(i));
-			hw_stats->pxoffrxc[i] +=
-				YUSUR2_READ_REG(hw, YUSUR2_PXOFFRXC(i));
-		} else {
-			hw_stats->pxonrxc[i] +=
-				YUSUR2_READ_REG(hw, YUSUR2_PXONRXCNT(i));
-			hw_stats->pxoffrxc[i] +=
-				YUSUR2_READ_REG(hw, YUSUR2_PXOFFRXCNT(i));
-			hw_stats->pxon2offc[i] +=
-				YUSUR2_READ_REG(hw, YUSUR2_PXON2OFFCNT(i));
-		}
-		hw_stats->pxontxc[i] +=
-		    YUSUR2_READ_REG(hw, YUSUR2_PXONTXC(i));
-		hw_stats->pxofftxc[i] +=
-		    YUSUR2_READ_REG(hw, YUSUR2_PXOFFTXC(i));
-	}
-	for (i = 0; i < YUSUR2_QUEUE_STAT_COUNTERS; i++) {
-		uint32_t delta_qprc = YUSUR2_READ_REG(hw, YUSUR2_QPRC(i));
-		uint32_t delta_qptc = YUSUR2_READ_REG(hw, YUSUR2_QPTC(i));
-		uint32_t delta_qprdc = YUSUR2_READ_REG(hw, YUSUR2_QPRDC(i));
-
-		delta_gprc += delta_qprc;
-
-		hw_stats->qprc[i] += delta_qprc;
-		hw_stats->qptc[i] += delta_qptc;
-
-		hw_stats->qbrc[i] += YUSUR2_READ_REG(hw, YUSUR2_QBRC_L(i));
-		hw_stats->qbrc[i] +=
-		    ((uint64_t)YUSUR2_READ_REG(hw, YUSUR2_QBRC_H(i)) << 32);
-		if (crc_strip == 0)
-			hw_stats->qbrc[i] -= delta_qprc * RTE_ETHER_CRC_LEN;
-
-		hw_stats->qbtc[i] += YUSUR2_READ_REG(hw, YUSUR2_QBTC_L(i));
-		hw_stats->qbtc[i] +=
-		    ((uint64_t)YUSUR2_READ_REG(hw, YUSUR2_QBTC_H(i)) << 32);
-
-		hw_stats->qprdc[i] += delta_qprdc;
-		*total_qprdc += hw_stats->qprdc[i];
-
-		*total_qprc += hw_stats->qprc[i];
-		*total_qbrc += hw_stats->qbrc[i];
-	}
-	hw_stats->mlfc += YUSUR2_READ_REG(hw, YUSUR2_MLFC);
-	hw_stats->mrfc += YUSUR2_READ_REG(hw, YUSUR2_MRFC);
-	hw_stats->rlec += YUSUR2_READ_REG(hw, YUSUR2_RLEC);
-
-	/*
-	 * An errata states that gprc actually counts good + missed packets:
-	 * Workaround to set gprc to summated queue packet receives
-	 */
-	hw_stats->gprc = *total_qprc;
-
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		hw_stats->gorc += YUSUR2_READ_REG(hw, YUSUR2_GORCL);
-		hw_stats->gorc += ((u64)YUSUR2_READ_REG(hw, YUSUR2_GORCH) << 32);
-		hw_stats->gotc += YUSUR2_READ_REG(hw, YUSUR2_GOTCL);
-		hw_stats->gotc += ((u64)YUSUR2_READ_REG(hw, YUSUR2_GOTCH) << 32);
-		hw_stats->tor += YUSUR2_READ_REG(hw, YUSUR2_TORL);
-		hw_stats->tor += ((u64)YUSUR2_READ_REG(hw, YUSUR2_TORH) << 32);
-		hw_stats->lxonrxc += YUSUR2_READ_REG(hw, YUSUR2_LXONRXCNT);
-		hw_stats->lxoffrxc += YUSUR2_READ_REG(hw, YUSUR2_LXOFFRXCNT);
-	} else {
-		hw_stats->lxonrxc += YUSUR2_READ_REG(hw, YUSUR2_LXONRXC);
-		hw_stats->lxoffrxc += YUSUR2_READ_REG(hw, YUSUR2_LXOFFRXC);
-		/* 82598 only has a counter in the high register */
-		hw_stats->gorc += YUSUR2_READ_REG(hw, YUSUR2_GORCH);
-		hw_stats->gotc += YUSUR2_READ_REG(hw, YUSUR2_GOTCH);
-		hw_stats->tor += YUSUR2_READ_REG(hw, YUSUR2_TORH);
-	}
-	uint64_t old_tpr = hw_stats->tpr;
-
-	hw_stats->tpr += YUSUR2_READ_REG(hw, YUSUR2_TPR);
-	hw_stats->tpt += YUSUR2_READ_REG(hw, YUSUR2_TPT);
-
-	if (crc_strip == 0)
-		hw_stats->gorc -= delta_gprc * RTE_ETHER_CRC_LEN;
-
-	uint64_t delta_gptc = YUSUR2_READ_REG(hw, YUSUR2_GPTC);
-	hw_stats->gptc += delta_gptc;
-	hw_stats->gotc -= delta_gptc * RTE_ETHER_CRC_LEN;
-	hw_stats->tor -= (hw_stats->tpr - old_tpr) * RTE_ETHER_CRC_LEN;
-
-	/*
-	 * Workaround: mprc hardware is incorrectly counting
-	 * broadcasts, so for now we subtract those.
-	 */
-	bprc = YUSUR2_READ_REG(hw, YUSUR2_BPRC);
-	hw_stats->bprc += bprc;
-	hw_stats->mprc += YUSUR2_READ_REG(hw, YUSUR2_MPRC);
-	if (hw->mac.type == yusur2_mac_82598EB)
-		hw_stats->mprc -= bprc;
-
-	hw_stats->prc64 += YUSUR2_READ_REG(hw, YUSUR2_PRC64);
-	hw_stats->prc127 += YUSUR2_READ_REG(hw, YUSUR2_PRC127);
-	hw_stats->prc255 += YUSUR2_READ_REG(hw, YUSUR2_PRC255);
-	hw_stats->prc511 += YUSUR2_READ_REG(hw, YUSUR2_PRC511);
-	hw_stats->prc1023 += YUSUR2_READ_REG(hw, YUSUR2_PRC1023);
-	hw_stats->prc1522 += YUSUR2_READ_REG(hw, YUSUR2_PRC1522);
-
-	lxon = YUSUR2_READ_REG(hw, YUSUR2_LXONTXC);
-	hw_stats->lxontxc += lxon;
-	lxoff = YUSUR2_READ_REG(hw, YUSUR2_LXOFFTXC);
-	hw_stats->lxofftxc += lxoff;
-	total = lxon + lxoff;
-
-	hw_stats->mptc += YUSUR2_READ_REG(hw, YUSUR2_MPTC);
-	hw_stats->ptc64 += YUSUR2_READ_REG(hw, YUSUR2_PTC64);
-	hw_stats->gptc -= total;
-	hw_stats->mptc -= total;
-	hw_stats->ptc64 -= total;
-	hw_stats->gotc -= total * RTE_ETHER_MIN_LEN;
-
-	hw_stats->ruc += YUSUR2_READ_REG(hw, YUSUR2_RUC);
-	hw_stats->rfc += YUSUR2_READ_REG(hw, YUSUR2_RFC);
-	hw_stats->roc += YUSUR2_READ_REG(hw, YUSUR2_ROC);
-	hw_stats->rjc += YUSUR2_READ_REG(hw, YUSUR2_RJC);
-	hw_stats->mngprc += YUSUR2_READ_REG(hw, YUSUR2_MNGPRC);
-	hw_stats->mngpdc += YUSUR2_READ_REG(hw, YUSUR2_MNGPDC);
-	hw_stats->mngptc += YUSUR2_READ_REG(hw, YUSUR2_MNGPTC);
-	hw_stats->ptc127 += YUSUR2_READ_REG(hw, YUSUR2_PTC127);
-	hw_stats->ptc255 += YUSUR2_READ_REG(hw, YUSUR2_PTC255);
-	hw_stats->ptc511 += YUSUR2_READ_REG(hw, YUSUR2_PTC511);
-	hw_stats->ptc1023 += YUSUR2_READ_REG(hw, YUSUR2_PTC1023);
-	hw_stats->ptc1522 += YUSUR2_READ_REG(hw, YUSUR2_PTC1522);
-	hw_stats->bptc += YUSUR2_READ_REG(hw, YUSUR2_BPTC);
-	hw_stats->xec += YUSUR2_READ_REG(hw, YUSUR2_XEC);
-	hw_stats->fccrc += YUSUR2_READ_REG(hw, YUSUR2_FCCRC);
-	hw_stats->fclast += YUSUR2_READ_REG(hw, YUSUR2_FCLAST);
-	/* Only read FCOE on 82599 */
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		hw_stats->fcoerpdc += YUSUR2_READ_REG(hw, YUSUR2_FCOERPDC);
-		hw_stats->fcoeprc += YUSUR2_READ_REG(hw, YUSUR2_FCOEPRC);
-		hw_stats->fcoeptc += YUSUR2_READ_REG(hw, YUSUR2_FCOEPTC);
-		hw_stats->fcoedwrc += YUSUR2_READ_REG(hw, YUSUR2_FCOEDWRC);
-		hw_stats->fcoedwtc += YUSUR2_READ_REG(hw, YUSUR2_FCOEDWTC);
-	}
-
-	/* Flow Director Stats registers */
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		hw_stats->fdirmatch += YUSUR2_READ_REG(hw, YUSUR2_FDIRMATCH);
-		hw_stats->fdirmiss += YUSUR2_READ_REG(hw, YUSUR2_FDIRMISS);
-		hw_stats->fdirustat_add += YUSUR2_READ_REG(hw,
-					YUSUR2_FDIRUSTAT) & 0xFFFF;
-		hw_stats->fdirustat_remove += (YUSUR2_READ_REG(hw,
-					YUSUR2_FDIRUSTAT) >> 16) & 0xFFFF;
-		hw_stats->fdirfstat_fadd += YUSUR2_READ_REG(hw,
-					YUSUR2_FDIRFSTAT) & 0xFFFF;
-		hw_stats->fdirfstat_fremove += (YUSUR2_READ_REG(hw,
-					YUSUR2_FDIRFSTAT) >> 16) & 0xFFFF;
-	}
-	/* MACsec Stats registers */
-	macsec_stats->out_pkts_untagged += YUSUR2_READ_REG(hw, YUSUR2_LSECTXUT);
-	macsec_stats->out_pkts_encrypted +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECTXPKTE);
-	macsec_stats->out_pkts_protected +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECTXPKTP);
-	macsec_stats->out_octets_encrypted +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECTXOCTE);
-	macsec_stats->out_octets_protected +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECTXOCTP);
-	macsec_stats->in_pkts_untagged += YUSUR2_READ_REG(hw, YUSUR2_LSECRXUT);
-	macsec_stats->in_pkts_badtag += YUSUR2_READ_REG(hw, YUSUR2_LSECRXBAD);
-	macsec_stats->in_pkts_nosci += YUSUR2_READ_REG(hw, YUSUR2_LSECRXNOSCI);
-	macsec_stats->in_pkts_unknownsci +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECRXUNSCI);
-	macsec_stats->in_octets_decrypted +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECRXOCTD);
-	macsec_stats->in_octets_validated +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECRXOCTV);
-	macsec_stats->in_pkts_unchecked += YUSUR2_READ_REG(hw, YUSUR2_LSECRXUNCH);
-	macsec_stats->in_pkts_delayed += YUSUR2_READ_REG(hw, YUSUR2_LSECRXDELAY);
-	macsec_stats->in_pkts_late += YUSUR2_READ_REG(hw, YUSUR2_LSECRXLATE);
-	for (i = 0; i < 2; i++) {
-		macsec_stats->in_pkts_ok +=
-			YUSUR2_READ_REG(hw, YUSUR2_LSECRXOK(i));
-		macsec_stats->in_pkts_invalid +=
-			YUSUR2_READ_REG(hw, YUSUR2_LSECRXINV(i));
-		macsec_stats->in_pkts_notvalid +=
-			YUSUR2_READ_REG(hw, YUSUR2_LSECRXNV(i));
-	}
-	macsec_stats->in_pkts_unusedsa += YUSUR2_READ_REG(hw, YUSUR2_LSECRXUNSA);
-	macsec_stats->in_pkts_notusingsa +=
-		YUSUR2_READ_REG(hw, YUSUR2_LSECRXNUSA);
+	//TODO:
 }
 
 /*
@@ -3543,17 +2869,9 @@ static int yusur2_dev_xstats_get_names_by_id(
 static int yusur2vf_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 	struct rte_eth_xstat_name *xstats_names, unsigned limit)
 {
-	unsigned i;
+	//TODO: vf stats support
+	return 0;
 
-	if (limit < YUSUR2VF_NB_XSTATS && xstats_names != NULL)
-		return -ENOMEM;
-
-	if (xstats_names != NULL)
-		for (i = 0; i < YUSUR2VF_NB_XSTATS; i++)
-			strlcpy(xstats_names[i].name,
-				rte_yusur2vf_stats_strings[i].name,
-				sizeof(xstats_names[i].name));
-	return YUSUR2VF_NB_XSTATS;
 }
 
 static int
@@ -3745,6 +3063,8 @@ yusur2_dev_xstats_reset(struct rte_eth_dev *dev)
 static void
 yusur2vf_update_stats(struct rte_eth_dev *dev)
 {
+//TODO: support stats of VF...
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct yusur2vf_hw_stats *hw_stats = (struct yusur2vf_hw_stats *)
 			  YUSUR2_DEV_PRIVATE_TO_STATS(dev->data->dev_private);
@@ -3768,118 +3088,55 @@ yusur2vf_update_stats(struct rte_eth_dev *dev)
 	/* Rx Multicst Packet */
 	UPDATE_VF_STAT(YUSUR2_VFMPRC,
 	    hw_stats->last_vfmprc, hw_stats->vfmprc);
+#endif
 }
 
 static int
 yusur2vf_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 		       unsigned n)
 {
-	struct yusur2vf_hw_stats *hw_stats = (struct yusur2vf_hw_stats *)
-			YUSUR2_DEV_PRIVATE_TO_STATS(dev->data->dev_private);
-	unsigned i;
-
-	if (n < YUSUR2VF_NB_XSTATS)
-		return YUSUR2VF_NB_XSTATS;
-
-	yusur2vf_update_stats(dev);
-
-	if (!xstats)
-		return 0;
-
-	/* Extended stats */
-	for (i = 0; i < YUSUR2VF_NB_XSTATS; i++) {
-		xstats[i].id = i;
-		xstats[i].value = *(uint64_t *)(((char *)hw_stats) +
-			rte_yusur2vf_stats_strings[i].offset);
-	}
-
-	return YUSUR2VF_NB_XSTATS;
+//TODO: support stats of VF...
+	return 0;
 }
 
 static int
 yusur2vf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	struct yusur2vf_hw_stats *hw_stats = (struct yusur2vf_hw_stats *)
-			  YUSUR2_DEV_PRIVATE_TO_STATS(dev->data->dev_private);
+	//TODO: support stats of VF...
 
-	yusur2vf_update_stats(dev);
-
-	if (stats == NULL)
-		return -EINVAL;
-
-	stats->ipackets = hw_stats->vfgprc;
-	stats->ibytes = hw_stats->vfgorc;
-	stats->opackets = hw_stats->vfgptc;
-	stats->obytes = hw_stats->vfgotc;
 	return 0;
 }
 
 static int
 yusur2vf_dev_stats_reset(struct rte_eth_dev *dev)
 {
-	struct yusur2vf_hw_stats *hw_stats = (struct yusur2vf_hw_stats *)
-			YUSUR2_DEV_PRIVATE_TO_STATS(dev->data->dev_private);
-
-	/* Sync HW register to the last stats */
-	yusur2vf_dev_stats_get(dev, NULL);
-
-	/* reset HW current stats*/
-	hw_stats->vfgprc = 0;
-	hw_stats->vfgorc = 0;
-	hw_stats->vfgptc = 0;
-	hw_stats->vfgotc = 0;
-
+//TODO: support stats of VF...
 	return 0;
 }
 
 static int
 yusur2_fw_version_get(struct rte_eth_dev *dev, char *fw_version, size_t fw_size)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	u16 eeprom_verh, eeprom_verl;
-	u32 etrack_id;
-	int ret;
-
-	yusur2_read_eeprom(hw, 0x2e, &eeprom_verh);
-	yusur2_read_eeprom(hw, 0x2d, &eeprom_verl);
-
-	etrack_id = (eeprom_verh << 16) | eeprom_verl;
-	ret = snprintf(fw_version, fw_size, "0x%08x", etrack_id);
-
-	ret += 1; /* add the size of '\0' */
-	if (fw_size < (u32)ret)
-		return ret;
-	else
-		return 0;
+//TODO: firmware...
+	return 0;
 }
 
 static int
 yusur2_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 {
+//TODO: check
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 
 	dev_info->max_rx_queues = (uint16_t)hw->mac.max_rx_queues;
 	dev_info->max_tx_queues = (uint16_t)hw->mac.max_tx_queues;
-	if (RTE_ETH_DEV_SRIOV(dev).active == 0) {
-		/*
-		 * When DCB/VT is off, maximum number of queues changes,
-		 * except for 82598EB, which remains constant.
-		 */
-		if (dev_conf->txmode.mq_mode == ETH_MQ_TX_NONE &&
-				hw->mac.type != yusur2_mac_82598EB)
-			dev_info->max_tx_queues = YUSUR2_NONE_MODE_TX_NB_QUEUES;
-	}
 	dev_info->min_rx_bufsize = 1024; /* cf BSIZEPACKET in SRRCTL register */
 	dev_info->max_rx_pktlen = 15872; /* includes CRC, cf MAXFRS register */
 	dev_info->max_mac_addrs = hw->mac.num_rar_entries;
 	dev_info->max_hash_mac_addrs = YUSUR2_VMDQ_NUM_UC_MAC;
 	dev_info->max_vfs = pci_dev->max_vfs;
-	if (hw->mac.type == yusur2_mac_82598EB)
-		dev_info->max_vmdq_pools = ETH_16_POOLS;
-	else
-		dev_info->max_vmdq_pools = ETH_64_POOLS;
+	dev_info->max_vmdq_pools = ETH_64_POOLS;
 	dev_info->max_mtu =  dev_info->max_rx_pktlen - YUSUR2_ETH_OVERHEAD;
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
 	dev_info->vmdq_queue_num = dev_info->max_rx_queues;
@@ -3919,21 +3176,6 @@ yusur2_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->flow_type_rss_offloads = YUSUR2_RSS_OFFLOAD_ALL;
 
 	dev_info->speed_capa = ETH_LINK_SPEED_1G | ETH_LINK_SPEED_10G;
-	if (hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T ||
-			hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T_L)
-		dev_info->speed_capa = ETH_LINK_SPEED_10M |
-			ETH_LINK_SPEED_100M | ETH_LINK_SPEED_1G;
-
-	if (hw->mac.type == yusur2_mac_X540 ||
-	    hw->mac.type == yusur2_mac_X540_vf ||
-	    hw->mac.type == yusur2_mac_X550 ||
-	    hw->mac.type == yusur2_mac_X550_vf) {
-		dev_info->speed_capa |= ETH_LINK_SPEED_100M;
-	}
-	if (hw->mac.type == yusur2_mac_X550) {
-		dev_info->speed_capa |= ETH_LINK_SPEED_2_5G;
-		dev_info->speed_capa |= ETH_LINK_SPEED_5G;
-	}
 
 	/* Driver-preferred Rx/Tx parameters */
 	dev_info->default_rxportconf.burst_size = 32;
@@ -3989,54 +3231,7 @@ static int
 yusur2vf_dev_info_get(struct rte_eth_dev *dev,
 		     struct rte_eth_dev_info *dev_info)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	dev_info->max_rx_queues = (uint16_t)hw->mac.max_rx_queues;
-	dev_info->max_tx_queues = (uint16_t)hw->mac.max_tx_queues;
-	dev_info->min_rx_bufsize = 1024; /* cf BSIZEPACKET in SRRCTL reg */
-	dev_info->max_rx_pktlen = 9728; /* includes CRC, cf MAXFRS reg */
-	dev_info->max_mtu = dev_info->max_rx_pktlen - YUSUR2_ETH_OVERHEAD;
-	dev_info->max_mac_addrs = hw->mac.num_rar_entries;
-	dev_info->max_hash_mac_addrs = YUSUR2_VMDQ_NUM_UC_MAC;
-	dev_info->max_vfs = pci_dev->max_vfs;
-	if (hw->mac.type == yusur2_mac_82598EB)
-		dev_info->max_vmdq_pools = ETH_16_POOLS;
-	else
-		dev_info->max_vmdq_pools = ETH_64_POOLS;
-	dev_info->rx_queue_offload_capa = yusur2_get_rx_queue_offloads(dev);
-	dev_info->rx_offload_capa = (yusur2_get_rx_port_offloads(dev) |
-				     dev_info->rx_queue_offload_capa);
-	dev_info->tx_queue_offload_capa = yusur2_get_tx_queue_offloads(dev);
-	dev_info->tx_offload_capa = yusur2_get_tx_port_offloads(dev);
-	dev_info->hash_key_size = YUSUR2_HKEY_MAX_INDEX * sizeof(uint32_t);
-	dev_info->reta_size = yusur2_reta_size_get(hw->mac.type);
-	dev_info->flow_type_rss_offloads = YUSUR2_RSS_OFFLOAD_ALL;
-
-	dev_info->default_rxconf = (struct rte_eth_rxconf) {
-		.rx_thresh = {
-			.pthresh = YUSUR2_DEFAULT_RX_PTHRESH,
-			.hthresh = YUSUR2_DEFAULT_RX_HTHRESH,
-			.wthresh = YUSUR2_DEFAULT_RX_WTHRESH,
-		},
-		.rx_free_thresh = YUSUR2_DEFAULT_RX_FREE_THRESH,
-		.rx_drop_en = 0,
-		.offloads = 0,
-	};
-
-	dev_info->default_txconf = (struct rte_eth_txconf) {
-		.tx_thresh = {
-			.pthresh = YUSUR2_DEFAULT_TX_PTHRESH,
-			.hthresh = YUSUR2_DEFAULT_TX_HTHRESH,
-			.wthresh = YUSUR2_DEFAULT_TX_WTHRESH,
-		},
-		.tx_free_thresh = YUSUR2_DEFAULT_TX_FREE_THRESH,
-		.tx_rs_thresh = YUSUR2_DEFAULT_TX_RSBIT_THRESH,
-		.offloads = 0,
-	};
-
-	dev_info->rx_desc_lim = rx_desc_lim;
-	dev_info->tx_desc_lim = tx_desc_lim;
+	//TODO:support vf
 
 	return 0;
 }
@@ -4045,104 +3240,8 @@ static int
 yusur2vf_check_link(struct yusur2_hw *hw, yusur2_link_speed *speed,
 		   int *link_up, int wait_to_complete)
 {
-	struct yusur2_adapter *adapter = container_of(hw,
-						     struct yusur2_adapter, hw);
-	struct yusur2_mbx_info *mbx = &hw->mbx;
-	struct yusur2_mac_info *mac = &hw->mac;
-	uint32_t links_reg, in_msg;
-	int ret_val = 0;
-
-	/* If we were hit with a reset drop the link */
-	if (!mbx->ops.check_for_rst(hw, 0) || !mbx->timeout)
-		mac->get_link_status = true;
-
-	if (!mac->get_link_status)
-		goto out;
-
-	/* if link status is down no point in checking to see if pf is up */
-	links_reg = YUSUR2_READ_REG(hw, YUSUR2_VFLINKS);
-	if (!(links_reg & YUSUR2_LINKS_UP))
-		goto out;
-
-	/* for SFP+ modules and DA cables on 82599 it can take up to 500usecs
-	 * before the link status is correct
-	 */
-	if (mac->type == yusur2_mac_82599_vf && wait_to_complete) {
-		int i;
-
-		for (i = 0; i < 5; i++) {
-			rte_delay_us(100);
-			links_reg = YUSUR2_READ_REG(hw, YUSUR2_VFLINKS);
-
-			if (!(links_reg & YUSUR2_LINKS_UP))
-				goto out;
-		}
-	}
-
-	switch (links_reg & YUSUR2_LINKS_SPEED_82599) {
-	case YUSUR2_LINKS_SPEED_10G_82599:
-		*speed = YUSUR2_LINK_SPEED_10GB_FULL;
-		if (hw->mac.type >= yusur2_mac_X550) {
-			if (links_reg & YUSUR2_LINKS_SPEED_NON_STD)
-				*speed = YUSUR2_LINK_SPEED_2_5GB_FULL;
-		}
-		break;
-	case YUSUR2_LINKS_SPEED_1G_82599:
-		*speed = YUSUR2_LINK_SPEED_1GB_FULL;
-		break;
-	case YUSUR2_LINKS_SPEED_100_82599:
-		*speed = YUSUR2_LINK_SPEED_100_FULL;
-		if (hw->mac.type == yusur2_mac_X550) {
-			if (links_reg & YUSUR2_LINKS_SPEED_NON_STD)
-				*speed = YUSUR2_LINK_SPEED_5GB_FULL;
-		}
-		break;
-	case YUSUR2_LINKS_SPEED_10_X550EM_A:
-		*speed = YUSUR2_LINK_SPEED_UNKNOWN;
-		/* Since Reserved in older MAC's */
-		if (hw->mac.type >= yusur2_mac_X550)
-			*speed = YUSUR2_LINK_SPEED_10_FULL;
-		break;
-	default:
-		*speed = YUSUR2_LINK_SPEED_UNKNOWN;
-	}
-
-	if (wait_to_complete == 0 && adapter->pflink_fullchk == 0) {
-		if (*speed == YUSUR2_LINK_SPEED_UNKNOWN)
-			mac->get_link_status = true;
-		else
-			mac->get_link_status = false;
-
-		goto out;
-	}
-
-	/* if the read failed it could just be a mailbox collision, best wait
-	 * until we are called again and don't report an error
-	 */
-	if (mbx->ops.read(hw, &in_msg, 1, 0))
-		goto out;
-
-	if (!(in_msg & YUSUR2_VT_MSGTYPE_CTS)) {
-		/* msg is not CTS and is NACK we must have lost CTS status */
-		if (in_msg & YUSUR2_VT_MSGTYPE_NACK)
-			mac->get_link_status = false;
-		goto out;
-	}
-
-	/* the pf is talking, if we timed out in the past we reinit */
-	if (!mbx->timeout) {
-		ret_val = -1;
-		goto out;
-	}
-
-	/* if we passed all the tests above then the link is up and we no
-	 * longer need to check for link
-	 */
-	mac->get_link_status = false;
-
-out:
-	*link_up = !mac->get_link_status;
-	return ret_val;
+	//TODO:
+	return 0;
 }
 
 /*
@@ -4152,6 +3251,8 @@ out:
 static int
 yusur2_dev_wait_setup_link_complete(struct rte_eth_dev *dev, uint32_t timeout_ms)
 {
+//TODO: need check...
+#if 0
 #define WARNING_TIMEOUT    9000 /* 9s  in total */
 	struct yusur2_adapter *ad = dev->data->dev_private;
 	uint32_t timeout = timeout_ms ? timeout_ms : WARNING_TIMEOUT;
@@ -4169,7 +3270,7 @@ yusur2_dev_wait_setup_link_complete(struct rte_eth_dev *dev, uint32_t timeout_ms
 			PMD_DRV_LOG(ERR, "YUSUR2 link thread not complete too long time!");
 		}
 	}
-
+#endif
 	return 1;
 }
 
@@ -4314,11 +3415,7 @@ yusur2_dev_link_update_share(struct rte_eth_dev *dev,
 	switch (link_speed) {
 	default:
 	case YUSUR2_LINK_SPEED_UNKNOWN:
-		if (hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T ||
-			hw->device_id == YUSUR2_DEV_ID_X550EM_A_1G_T_L)
-			link.link_speed = ETH_SPEED_NUM_10M;
-		else
-			link.link_speed = ETH_SPEED_NUM_100M;
+		link.link_speed = ETH_SPEED_NUM_100M;
 		break;
 
 	case YUSUR2_LINK_SPEED_10_FULL:
@@ -4505,6 +3602,8 @@ yusur2_dev_macsec_interrupt_setup(struct rte_eth_dev *dev)
 static int
 yusur2_dev_interrupt_get_status(struct rte_eth_dev *dev)
 {
+	//TODO:
+#if 0
 	uint32_t eicr;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct yusur2_interrupt *intr =
@@ -4528,12 +3627,7 @@ yusur2_dev_interrupt_get_status(struct rte_eth_dev *dev)
 
 	if (eicr & YUSUR2_EICR_LINKSEC)
 		intr->flags |= YUSUR2_FLAG_MACSEC;
-
-	if (hw->mac.type ==  yusur2_mac_X550EM_x &&
-	    hw->phy.type == yusur2_phy_x550em_ext_t &&
-	    (eicr & YUSUR2_EICR_GPI_SDP0_X550EM_x))
-		intr->flags |= YUSUR2_FLAG_PHY_INTERRUPT;
-
+#endif
 	return 0;
 }
 
@@ -4980,70 +4074,9 @@ out:
 }
 
 static int
-yusur2_dcb_pfc_enable(struct rte_eth_dev *dev, uint8_t tc_num)
-{
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int32_t ret_val = YUSUR2_NOT_IMPLEMENTED;
-
-	if (hw->mac.type != yusur2_mac_82598EB) {
-		ret_val = yusur2_dcb_pfc_enable_generic(hw, tc_num);
-	}
-	return ret_val;
-}
-
-static int
 yusur2_priority_flow_ctrl_set(struct rte_eth_dev *dev, struct rte_eth_pfc_conf *pfc_conf)
 {
-	int err;
-	uint32_t rx_buf_size;
-	uint32_t max_high_water;
-	uint8_t tc_num;
-	uint8_t  map[YUSUR2_DCB_MAX_USER_PRIORITY] = { 0 };
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_dcb_config *dcb_config =
-		YUSUR2_DEV_PRIVATE_TO_DCB_CFG(dev->data->dev_private);
-
-	enum yusur2_fc_mode rte_fcmode_2_yusur2_fcmode[] = {
-		yusur2_fc_none,
-		yusur2_fc_rx_pause,
-		yusur2_fc_tx_pause,
-		yusur2_fc_full
-	};
-
-	PMD_INIT_FUNC_TRACE();
-
-	yusur2_dcb_unpack_map_cee(dcb_config, YUSUR2_DCB_RX_CONFIG, map);
-	tc_num = map[pfc_conf->priority];
-	rx_buf_size = YUSUR2_READ_REG(hw, YUSUR2_RXPBSIZE(tc_num));
-	PMD_INIT_LOG(DEBUG, "Rx packet buffer size = 0x%x", rx_buf_size);
-	/*
-	 * At least reserve one Ethernet frame for watermark
-	 * high_water/low_water in kilo bytes for yusur2
-	 */
-	max_high_water = (rx_buf_size -
-			RTE_ETHER_MAX_LEN) >> YUSUR2_RXPBSIZE_SHIFT;
-	if ((pfc_conf->fc.high_water > max_high_water) ||
-	    (pfc_conf->fc.high_water <= pfc_conf->fc.low_water)) {
-		PMD_INIT_LOG(ERR, "Invalid high/low water setup value in KB");
-		PMD_INIT_LOG(ERR, "High_water must <= 0x%x", max_high_water);
-		return -EINVAL;
-	}
-
-	hw->fc.requested_mode = rte_fcmode_2_yusur2_fcmode[pfc_conf->fc.mode];
-	hw->fc.pause_time = pfc_conf->fc.pause_time;
-	hw->fc.send_xon = pfc_conf->fc.send_xon;
-	hw->fc.low_water[tc_num] =  pfc_conf->fc.low_water;
-	hw->fc.high_water[tc_num] = pfc_conf->fc.high_water;
-
-	err = yusur2_dcb_pfc_enable(dev, tc_num);
-
-	/* Not negotiated is not an error case */
-	if ((err == YUSUR2_SUCCESS) || (err == YUSUR2_ERR_FC_NOT_NEGOTIATED))
-		return 0;
-
-	PMD_INIT_LOG(ERR, "yusur2_dcb_pfc_enable = 0x%x", err);
-	return -EIO;
+	return 0;
 }
 
 static int
@@ -5250,256 +4283,37 @@ yusur2_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 static void
 yusur2vf_intr_disable(struct rte_eth_dev *dev)
 {
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	PMD_INIT_FUNC_TRACE();
-
-	/* Clear interrupt mask to stop from interrupts being generated */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIMC, YUSUR2_VF_IRQ_CLEAR_MASK);
-
-	YUSUR2_WRITE_FLUSH(hw);
-
-	/* Clear mask value. */
-	intr->mask = 0;
+	//TODO:
 }
 
 static void
 yusur2vf_intr_enable(struct rte_eth_dev *dev)
 {
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	PMD_INIT_FUNC_TRACE();
-
-	/* VF enable interrupt autoclean */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIAM, YUSUR2_VF_IRQ_ENABLE_MASK);
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIAC, YUSUR2_VF_IRQ_ENABLE_MASK);
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIMS, YUSUR2_VF_IRQ_ENABLE_MASK);
-
-	YUSUR2_WRITE_FLUSH(hw);
-
-	/* Save YUSUR2_VTEIMS value to mask. */
-	intr->mask = YUSUR2_VF_IRQ_ENABLE_MASK;
+	//TODO:
 }
 
 static int
 yusur2vf_dev_configure(struct rte_eth_dev *dev)
 {
-	struct rte_eth_conf *conf = &dev->data->dev_conf;
-	struct yusur2_adapter *adapter = dev->data->dev_private;
-
-	PMD_INIT_LOG(DEBUG, "Configured Virtual Function port id: %d",
-		     dev->data->port_id);
-
-	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
-		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
-
-	/*
-	 * VF has no ability to enable/disable HW CRC
-	 * Keep the persistent behavior the same as Host PF
-	 */
-#ifndef RTE_LIBRTE_YUSUR2_PF_DISABLE_STRIP_CRC
-	if (conf->rxmode.offloads & DEV_RX_OFFLOAD_KEEP_CRC) {
-		PMD_INIT_LOG(NOTICE, "VF can't disable HW CRC Strip");
-		conf->rxmode.offloads &= ~DEV_RX_OFFLOAD_KEEP_CRC;
-	}
-#else
-	if (!(conf->rxmode.offloads & DEV_RX_OFFLOAD_KEEP_CRC)) {
-		PMD_INIT_LOG(NOTICE, "VF can't enable HW CRC Strip");
-		conf->rxmode.offloads |= DEV_RX_OFFLOAD_KEEP_CRC;
-	}
-#endif
-
-	/*
-	 * Initialize to TRUE. If any of Rx queues doesn't meet the bulk
-	 * allocation or vector Rx preconditions we will reset it.
-	 */
-	adapter->rx_bulk_alloc_allowed = true;
-	adapter->rx_vec_allowed = true;
-
 	return 0;
 }
 
 static int
 yusur2vf_dev_start(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t intr_vector = 0;
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-
-	int err, mask = 0;
-
-	PMD_INIT_FUNC_TRACE();
-
-	/* Stop the link setup handler before resetting the HW. */
-	yusur2_dev_wait_setup_link_complete(dev, 0);
-
-	err = hw->mac.ops.reset_hw(hw);
-
-	/**
-	 * In this case, reuses the MAC address assigned by VF
-	 * initialization.
-	 */
-	if (err != YUSUR2_SUCCESS && err != YUSUR2_ERR_INVALID_MAC_ADDR) {
-		PMD_INIT_LOG(ERR, "Unable to reset vf hardware (%d)", err);
-		return err;
-	}
-
-	hw->mac.get_link_status = true;
-
-	/* negotiate mailbox API version to use with the PF. */
-	yusur2vf_negotiate_api(hw);
-
-	yusur2vf_dev_tx_init(dev);
-
-	/* This can fail when allocating mbufs for descriptor rings */
-	err = yusur2vf_dev_rx_init(dev);
-	if (err) {
-		PMD_INIT_LOG(ERR, "Unable to initialize RX hardware (%d)", err);
-		yusur2_dev_clear_queues(dev);
-		return err;
-	}
-
-	/* Set vfta */
-	yusur2vf_set_vfta_all(dev, 1);
-
-	/* Set HW strip */
-	mask = ETH_VLAN_STRIP_MASK | ETH_VLAN_FILTER_MASK |
-		ETH_VLAN_EXTEND_MASK;
-	err = yusur2vf_vlan_offload_config(dev, mask);
-	if (err) {
-		PMD_INIT_LOG(ERR, "Unable to set VLAN offload (%d)", err);
-		yusur2_dev_clear_queues(dev);
-		return err;
-	}
-
-	yusur2vf_dev_rxtx_start(dev);
-
-	/* check and configure queue intr-vector mapping */
-	if (rte_intr_cap_multiple(intr_handle) &&
-	    dev->data->dev_conf.intr_conf.rxq) {
-		/* According to datasheet, only vector 0/1/2 can be used,
-		 * now only one vector is used for Rx queue
-		 */
-		intr_vector = 1;
-		if (rte_intr_efd_enable(intr_handle, intr_vector))
-			return -1;
-	}
-
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
-			PMD_INIT_LOG(ERR, "Failed to allocate %d rx_queues"
-				     " intr_vec", dev->data->nb_rx_queues);
-			return -ENOMEM;
-		}
-	}
-	yusur2vf_configure_msix(dev);
-
-	/* When a VF port is bound to VFIO-PCI, only miscellaneous interrupt
-	 * is mapped to VFIO vector 0 in eth_yusur2vf_dev_init( ).
-	 * If previous VFIO interrupt mapping setting in eth_yusur2vf_dev_init( )
-	 * is not cleared, it will fail when following rte_intr_enable( ) tries
-	 * to map Rx queue interrupt to other VFIO vectors.
-	 * So clear uio/vfio intr/evevnfd first to avoid failure.
-	 */
-	rte_intr_disable(intr_handle);
-
-	rte_intr_enable(intr_handle);
-
-	/* Re-enable interrupt for VF */
-	yusur2vf_intr_enable(dev);
-
-	/*
-	 * Update link status right before return, because it may
-	 * start link configuration process in a separate thread.
-	 */
-	yusur2vf_dev_link_update(dev, 0);
-
-	hw->adapter_stopped = false;
-
 	return 0;
 }
 
 static void
 yusur2vf_dev_stop(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_adapter *adapter = dev->data->dev_private;
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-
-	if (hw->adapter_stopped)
-		return;
-
-	PMD_INIT_FUNC_TRACE();
-
-	yusur2_dev_wait_setup_link_complete(dev, 0);
-
-	yusur2vf_intr_disable(dev);
-
-	hw->adapter_stopped = 1;
-	yusur2_stop_adapter(hw);
-
-	/*
-	  * Clear what we set, but we still keep shadow_vfta to
-	  * restore after device starts
-	  */
-	yusur2vf_set_vfta_all(dev, 0);
-
-	/* Clear stored conf */
-	dev->data->scattered_rx = 0;
-
-	yusur2_dev_clear_queues(dev);
-
-	/* Clean datapath event and queue/vec mapping */
-	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec != NULL) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
-
-	adapter->rss_reta_updated = 0;
+	//TODO:
 }
 
 static void
 yusur2vf_dev_close(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-
-	PMD_INIT_FUNC_TRACE();
-
-	yusur2_reset_hw(hw);
-
-	yusur2vf_dev_stop(dev);
-
-	yusur2_dev_free_queues(dev);
-
-	/**
-	 * Remove the VF MAC address ro ensure
-	 * that the VF traffic goes to the PF
-	 * after stop, close and detach of the VF
-	 **/
-	yusur2vf_remove_mac_addr(dev, 0);
-
-	dev->dev_ops = NULL;
-	dev->rx_pkt_burst = NULL;
-	dev->tx_pkt_burst = NULL;
-
-	rte_intr_disable(intr_handle);
-	rte_intr_callback_unregister(intr_handle,
-				     yusur2vf_dev_interrupt_handler, dev);
+	//TODO:
 }
 
 /*
@@ -5508,15 +4322,7 @@ yusur2vf_dev_close(struct rte_eth_dev *dev)
 static int
 yusur2vf_dev_reset(struct rte_eth_dev *dev)
 {
-	int ret;
-
-	ret = eth_yusur2vf_dev_uninit(dev);
-	if (ret)
-		return ret;
-
-	ret = eth_yusur2vf_dev_init(dev);
-
-	return ret;
+	return 0;
 }
 
 static void yusur2vf_set_vfta_all(struct rte_eth_dev *dev, bool on)
@@ -5544,54 +4350,12 @@ static void yusur2vf_set_vfta_all(struct rte_eth_dev *dev, bool on)
 static int
 yusur2vf_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_vfta *shadow_vfta =
-		YUSUR2_DEV_PRIVATE_TO_VFTA(dev->data->dev_private);
-	uint32_t vid_idx = 0;
-	uint32_t vid_bit = 0;
-	int ret = 0;
-
-	PMD_INIT_FUNC_TRACE();
-
-	/* vind is not used in VF driver, set to 0, check yusur2_set_vfta_vf */
-	ret = yusur2_set_vfta(hw, vlan_id, 0, !!on, false);
-	if (ret) {
-		PMD_INIT_LOG(ERR, "Unable to set VF vlan");
-		return ret;
-	}
-	vid_idx = (uint32_t) ((vlan_id >> 5) & 0x7F);
-	vid_bit = (uint32_t) (1 << (vlan_id & 0x1F));
-
-	/* Save what we set and retore it after device reset */
-	if (on)
-		shadow_vfta->vfta[vid_idx] |= vid_bit;
-	else
-		shadow_vfta->vfta[vid_idx] &= ~vid_bit;
-
 	return 0;
 }
 
 static void
 yusur2vf_vlan_strip_queue_set(struct rte_eth_dev *dev, uint16_t queue, int on)
 {
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t ctrl;
-
-	PMD_INIT_FUNC_TRACE();
-
-	if (queue >= hw->mac.max_rx_queues)
-		return;
-
-	ctrl = YUSUR2_READ_REG(hw, YUSUR2_RXDCTL(queue));
-	if (on)
-		ctrl |= YUSUR2_RXDCTL_VME;
-	else
-		ctrl &= ~YUSUR2_RXDCTL_VME;
-	YUSUR2_WRITE_REG(hw, YUSUR2_RXDCTL(queue), ctrl);
-
-	yusur2_vlan_hw_strip_bitmap_set(dev, queue, on);
 }
 
 static int
@@ -5616,10 +4380,6 @@ yusur2vf_vlan_offload_config(struct rte_eth_dev *dev, int mask)
 static int
 yusur2vf_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 {
-	yusur2_config_vlan_strip_on_all_queues(dev, mask);
-
-	yusur2vf_vlan_offload_config(dev, mask);
-
 	return 0;
 }
 
@@ -5688,10 +4448,6 @@ yusur2_uc_hash_table_set(struct rte_eth_dev *dev,
 	struct yusur2_uta_info *uta_info =
 		YUSUR2_DEV_PRIVATE_TO_UTA(dev->data->dev_private);
 
-	/* The UTA table only exists on 82599 hardware and newer */
-	if (hw->mac.type < yusur2_mac_82599EB)
-		return -ENOTSUP;
-
 	vector = yusur2_uta_vector(hw, mac_addr);
 	uta_idx = (vector >> yusur2_uta_bit_shift) & yusur2_uta_idx_mask;
 	uta_shift = vector & yusur2_uta_bit_mask;
@@ -5730,10 +4486,6 @@ yusur2_uc_all_hash_table_set(struct rte_eth_dev *dev, uint8_t on)
 		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct yusur2_uta_info *uta_info =
 		YUSUR2_DEV_PRIVATE_TO_UTA(dev->data->dev_private);
-
-	/* The UTA table only exists on 82599 hardware and newer */
-	if (hw->mac.type < yusur2_mac_82599EB)
-		return -ENOTSUP;
 
 	if (on) {
 		for (i = 0; i < ETH_VMDQ_NUM_UC_HASH_ARRAY; i++) {
@@ -5957,42 +4709,12 @@ yusur2_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
 static int
 yusur2vf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t vec = YUSUR2_MISC_VEC_ID;
-
-	if (rte_intr_allow_others(intr_handle))
-		vec = YUSUR2_RX_VEC_START;
-	intr->mask |= (1 << vec);
-	RTE_SET_USED(queue_id);
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIMS, intr->mask);
-
-	rte_intr_ack(intr_handle);
-
 	return 0;
 }
 
 static int
 yusur2vf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-	uint32_t vec = YUSUR2_MISC_VEC_ID;
-
-	if (rte_intr_allow_others(intr_handle))
-		vec = YUSUR2_RX_VEC_START;
-	intr->mask &= ~(1 << vec);
-	RTE_SET_USED(queue_id);
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEIMS, intr->mask);
-
 	return 0;
 }
 
@@ -6055,24 +4777,7 @@ static void
 yusur2vf_set_ivar_map(struct yusur2_hw *hw, int8_t direction,
 		     uint8_t queue, uint8_t msix_vector)
 {
-	uint32_t tmp, idx;
-
-	if (direction == -1) {
-		/* other causes */
-		msix_vector |= YUSUR2_IVAR_ALLOC_VAL;
-		tmp = YUSUR2_READ_REG(hw, YUSUR2_VTIVAR_MISC);
-		tmp &= ~0xFF;
-		tmp |= msix_vector;
-		YUSUR2_WRITE_REG(hw, YUSUR2_VTIVAR_MISC, tmp);
-	} else {
-		/* rx or tx cause */
-		msix_vector |= YUSUR2_IVAR_ALLOC_VAL;
-		idx = ((16 * (queue & 1)) + (8 * direction));
-		tmp = YUSUR2_READ_REG(hw, YUSUR2_VTIVAR(queue >> 1));
-		tmp &= ~(0xFF << idx);
-		tmp |= (msix_vector << idx);
-		YUSUR2_WRITE_REG(hw, YUSUR2_VTIVAR(queue >> 1), tmp);
-	}
+	//TODO: check...
 }
 
 /**
@@ -6090,81 +4795,13 @@ static void
 yusur2_set_ivar_map(struct yusur2_hw *hw, int8_t direction,
 		   uint8_t queue, uint8_t msix_vector)
 {
-	uint32_t tmp, idx;
-
-	msix_vector |= YUSUR2_IVAR_ALLOC_VAL;
-	if (hw->mac.type == yusur2_mac_82598EB) {
-		if (direction == -1)
-			direction = 0;
-		idx = (((direction * 64) + queue) >> 2) & 0x1F;
-		tmp = YUSUR2_READ_REG(hw, YUSUR2_IVAR(idx));
-		tmp &= ~(0xFF << (8 * (queue & 0x3)));
-		tmp |= (msix_vector << (8 * (queue & 0x3)));
-		YUSUR2_WRITE_REG(hw, YUSUR2_IVAR(idx), tmp);
-	} else if ((hw->mac.type == yusur2_mac_82599EB) ||
-			(hw->mac.type == yusur2_mac_X540) ||
-			(hw->mac.type == yusur2_mac_X550) ||
-			(hw->mac.type == yusur2_mac_X550EM_x)) {
-		if (direction == -1) {
-			/* other causes */
-			idx = ((queue & 1) * 8);
-			tmp = YUSUR2_READ_REG(hw, YUSUR2_IVAR_MISC);
-			tmp &= ~(0xFF << idx);
-			tmp |= (msix_vector << idx);
-			YUSUR2_WRITE_REG(hw, YUSUR2_IVAR_MISC, tmp);
-		} else {
-			/* rx or tx causes */
-			idx = ((16 * (queue & 1)) + (8 * direction));
-			tmp = YUSUR2_READ_REG(hw, YUSUR2_IVAR(queue >> 1));
-			tmp &= ~(0xFF << idx);
-			tmp |= (msix_vector << idx);
-			YUSUR2_WRITE_REG(hw, YUSUR2_IVAR(queue >> 1), tmp);
-		}
-	}
+	//TODO:check...
 }
 
 static void
 yusur2vf_configure_msix(struct rte_eth_dev *dev)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
-	struct yusur2_hw *hw =
-		YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t q_idx;
-	uint32_t vector_idx = YUSUR2_MISC_VEC_ID;
-	uint32_t base = YUSUR2_MISC_VEC_ID;
-
-	/* Configure VF other cause ivar */
-	yusur2vf_set_ivar_map(hw, -1, 1, vector_idx);
-
-	/* won't configure msix register if no mapping is done
-	 * between intr vector and event fd.
-	 */
-	if (!rte_intr_dp_is_en(intr_handle))
-		return;
-
-	if (rte_intr_allow_others(intr_handle)) {
-		base = YUSUR2_RX_VEC_START;
-		vector_idx = YUSUR2_RX_VEC_START;
-	}
-
-	/* Configure all RX queues of VF */
-	for (q_idx = 0; q_idx < dev->data->nb_rx_queues; q_idx++) {
-		/* Force all queue use vector 0,
-		 * as YUSUR2_VF_MAXMSIVECOTR = 1
-		 */
-		yusur2vf_set_ivar_map(hw, 0, q_idx, vector_idx);
-		intr_handle->intr_vec[q_idx] = vector_idx;
-		if (vector_idx < base + intr_handle->nb_efd - 1)
-			vector_idx++;
-	}
-
-	/* As RX queue setting above show, all queues use the vector 0.
-	 * Set only the ITR value of YUSUR2_MISC_VEC_ID.
-	 */
-	YUSUR2_WRITE_REG(hw, YUSUR2_VTEITR(YUSUR2_MISC_VEC_ID),
-			YUSUR2_EITR_INTERVAL_US(YUSUR2_QUEUE_ITR_INTERVAL_DEFAULT)
-			| YUSUR2_EITR_CNT_WDIS);
+	//TODO:
 }
 
 /**
@@ -6175,6 +4812,8 @@ yusur2vf_configure_msix(struct rte_eth_dev *dev)
 static void
 yusur2_configure_msix(struct rte_eth_dev *dev)
 {
+//TODO: check...
+#if 0
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	struct yusur2_hw *hw =
@@ -6252,6 +4891,7 @@ yusur2_configure_msix(struct rte_eth_dev *dev)
 		  YUSUR2_EIMS_LSC);
 
 	YUSUR2_WRITE_REG(hw, YUSUR2_EIAC, mask);
+#endif
 }
 
 int
@@ -6308,89 +4948,18 @@ yusur2vf_add_mac_addr(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 		     __attribute__((unused)) uint32_t index,
 		     __attribute__((unused)) uint32_t pool)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int diag;
-
-	/*
-	 * On a 82599 VF, adding again the same MAC addr is not an idempotent
-	 * operation. Trap this case to avoid exhausting the [very limited]
-	 * set of PF resources used to store VF MAC addresses.
-	 */
-	if (memcmp(hw->mac.perm_addr, mac_addr,
-			sizeof(struct rte_ether_addr)) == 0)
-		return -1;
-	diag = yusur2vf_set_uc_addr_vf(hw, 2, mac_addr->addr_bytes);
-	if (diag != 0)
-		PMD_DRV_LOG(ERR, "Unable to add MAC address "
-			    "%02x:%02x:%02x:%02x:%02x:%02x - diag=%d",
-			    mac_addr->addr_bytes[0],
-			    mac_addr->addr_bytes[1],
-			    mac_addr->addr_bytes[2],
-			    mac_addr->addr_bytes[3],
-			    mac_addr->addr_bytes[4],
-			    mac_addr->addr_bytes[5],
-			    diag);
-	return diag;
+	return 0;
 }
 
 static void
 yusur2vf_remove_mac_addr(struct rte_eth_dev *dev, uint32_t index)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct rte_ether_addr *perm_addr =
-		(struct rte_ether_addr *)hw->mac.perm_addr;
-	struct rte_ether_addr *mac_addr;
-	uint32_t i;
-	int diag;
-
-	/*
-	 * The YUSUR2_VF_SET_MACVLAN command of the yusur2-pf driver does
-	 * not support the deletion of a given MAC address.
-	 * Instead, it imposes to delete all MAC addresses, then to add again
-	 * all MAC addresses with the exception of the one to be deleted.
-	 */
-	(void) yusur2vf_set_uc_addr_vf(hw, 0, NULL);
-
-	/*
-	 * Add again all MAC addresses, with the exception of the deleted one
-	 * and of the permanent MAC address.
-	 */
-	for (i = 0, mac_addr = dev->data->mac_addrs;
-	     i < hw->mac.num_rar_entries; i++, mac_addr++) {
-		/* Skip the deleted MAC address */
-		if (i == index)
-			continue;
-		/* Skip NULL MAC addresses */
-		if (rte_is_zero_ether_addr(mac_addr))
-			continue;
-		/* Skip the permanent MAC address */
-		if (memcmp(perm_addr, mac_addr,
-				sizeof(struct rte_ether_addr)) == 0)
-			continue;
-		diag = yusur2vf_set_uc_addr_vf(hw, 2, mac_addr->addr_bytes);
-		if (diag != 0)
-			PMD_DRV_LOG(ERR,
-				    "Adding again MAC address "
-				    "%02x:%02x:%02x:%02x:%02x:%02x failed "
-				    "diag=%d",
-				    mac_addr->addr_bytes[0],
-				    mac_addr->addr_bytes[1],
-				    mac_addr->addr_bytes[2],
-				    mac_addr->addr_bytes[3],
-				    mac_addr->addr_bytes[4],
-				    mac_addr->addr_bytes[5],
-				    diag);
-	}
 }
 
 static int
 yusur2vf_set_default_mac_addr(struct rte_eth_dev *dev,
 			struct rte_ether_addr *addr)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	hw->mac.ops.set_rar(hw, 0, (void *)addr, 0, 0);
-
 	return 0;
 }
 
@@ -6629,39 +5198,6 @@ yusur2_remove_5tuple_filter(struct rte_eth_dev *dev,
 static int
 yusur2vf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 {
-	struct yusur2_hw *hw;
-	uint32_t max_frame = mtu + YUSUR2_ETH_OVERHEAD;
-	struct rte_eth_dev_data *dev_data = dev->data;
-
-	hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	if (mtu < RTE_ETHER_MIN_MTU ||
-			max_frame > RTE_ETHER_MAX_JUMBO_FRAME_LEN)
-		return -EINVAL;
-
-	/* If device is started, refuse mtu that requires the support of
-	 * scattered packets when this feature has not been enabled before.
-	 */
-	if (dev_data->dev_started && !dev_data->scattered_rx &&
-	    (max_frame + 2 * YUSUR2_VLAN_TAG_SIZE >
-	     dev->data->min_rx_buf_size - RTE_PKTMBUF_HEADROOM)) {
-		PMD_INIT_LOG(ERR, "Stop port first.");
-		return -EINVAL;
-	}
-
-	/*
-	 * When supported by the underlying PF driver, use the YUSUR2_VF_SET_MTU
-	 * request of the version 2.0 of the mailbox API.
-	 * For now, use the YUSUR2_VF_SET_LPE request of the version 1.0
-	 * of the mailbox API.
-	 * This call to YUSUR2_SET_LPE action won't work with yusur2 pf drivers
-	 * prior to 3.11.33 which contains the following change:
-	 * "yusur2: Enable jumbo frames support w/ SR-IOV"
-	 */
-	yusur2vf_rlpml_set_vf(hw, max_frame);
-
-	/* update max frame size */
-	dev->data->dev_conf.rxmode.max_rx_pkt_len = max_frame;
 	return 0;
 }
 
@@ -7074,37 +5610,9 @@ yusur2_dev_filter_ctrl(struct rte_eth_dev *dev,
 		     enum rte_filter_op filter_op,
 		     void *arg)
 {
-	int ret = 0;
-
-	switch (filter_type) {
-	case RTE_ETH_FILTER_NTUPLE:
-		ret = yusur2_ntuple_filter_handle(dev, filter_op, arg);
-		break;
-	case RTE_ETH_FILTER_ETHERTYPE:
-		ret = yusur2_ethertype_filter_handle(dev, filter_op, arg);
-		break;
-	case RTE_ETH_FILTER_SYN:
-		ret = yusur2_syn_filter_handle(dev, filter_op, arg);
-		break;
-	case RTE_ETH_FILTER_FDIR:
-		ret = yusur2_fdir_ctrl_func(dev, filter_op, arg);
-		break;
-	case RTE_ETH_FILTER_L2_TUNNEL:
-		ret = yusur2_dev_l2_tunnel_filter_handle(dev, filter_op, arg);
-		break;
-	case RTE_ETH_FILTER_GENERIC:
-		if (filter_op != RTE_ETH_FILTER_GET)
-			return -EINVAL;
-		*(const void **)arg = &yusur2_flow_ops;
-		break;
-	default:
-		PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
-							filter_type);
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
+	PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
+						filter_type);
+	return -EINVAL;
 }
 
 static u8 *
@@ -7136,30 +5644,25 @@ yusur2_dev_set_mc_addr_list(struct rte_eth_dev *dev,
 static uint64_t
 yusur2_read_systime_cyclecounter(struct rte_eth_dev *dev)
 {
+	//TODO: check
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint64_t systime_cycles;
 
-	switch (hw->mac.type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		/* SYSTIMEL stores ns and SYSTIMEH stores seconds. */
-		systime_cycles = (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIML);
-		systime_cycles += (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIMH)
-				* NSEC_PER_SEC;
-		break;
-	default:
-		systime_cycles = (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIML);
-		systime_cycles |= (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIMH)
-				<< 32;
-	}
+	systime_cycles = (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIML);
+	systime_cycles |= (uint64_t)YUSUR2_READ_REG(hw, YUSUR2_SYSTIMH)
+			<< 32;
 
 	return systime_cycles;
+#endif
+	return 0;
 }
 
 static uint64_t
 yusur2_read_rx_tstamp_cyclecounter(struct rte_eth_dev *dev)
 {
+	//TODO: check
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint64_t rx_tstamp_cycles;
 
@@ -7180,11 +5683,15 @@ yusur2_read_rx_tstamp_cyclecounter(struct rte_eth_dev *dev)
 	}
 
 	return rx_tstamp_cycles;
+#endif
+	return 0;
 }
 
 static uint64_t
 yusur2_read_tx_tstamp_cyclecounter(struct rte_eth_dev *dev)
 {
+	//TODO:check
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint64_t tx_tstamp_cycles;
 
@@ -7205,75 +5712,14 @@ yusur2_read_tx_tstamp_cyclecounter(struct rte_eth_dev *dev)
 	}
 
 	return tx_tstamp_cycles;
+#endif
+	return 0;
 }
 
 static void
 yusur2_start_timecounters(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_adapter *adapter = dev->data->dev_private;
-	struct rte_eth_link link;
-	uint32_t incval = 0;
-	uint32_t shift = 0;
-
-	/* Get current link speed. */
-	yusur2_dev_link_update(dev, 1);
-	rte_eth_linkstatus_get(dev, &link);
-
-	switch (link.link_speed) {
-	case ETH_SPEED_NUM_100M:
-		incval = YUSUR2_INCVAL_100;
-		shift = YUSUR2_INCVAL_SHIFT_100;
-		break;
-	case ETH_SPEED_NUM_1G:
-		incval = YUSUR2_INCVAL_1GB;
-		shift = YUSUR2_INCVAL_SHIFT_1GB;
-		break;
-	case ETH_SPEED_NUM_10G:
-	default:
-		incval = YUSUR2_INCVAL_10GB;
-		shift = YUSUR2_INCVAL_SHIFT_10GB;
-		break;
-	}
-
-	switch (hw->mac.type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		/* Independent of link speed. */
-		incval = 1;
-		/* Cycles read will be interpreted as ns. */
-		shift = 0;
-		/* Fall-through */
-	case yusur2_mac_X540:
-		YUSUR2_WRITE_REG(hw, YUSUR2_TIMINCA, incval);
-		break;
-	case yusur2_mac_82599EB:
-		incval >>= YUSUR2_INCVAL_SHIFT_82599;
-		shift -= YUSUR2_INCVAL_SHIFT_82599;
-		YUSUR2_WRITE_REG(hw, YUSUR2_TIMINCA,
-				(1 << YUSUR2_INCPER_SHIFT_82599) | incval);
-		break;
-	default:
-		/* Not supported. */
-		return;
-	}
-
-	memset(&adapter->systime_tc, 0, sizeof(struct rte_timecounter));
-	memset(&adapter->rx_tstamp_tc, 0, sizeof(struct rte_timecounter));
-	memset(&adapter->tx_tstamp_tc, 0, sizeof(struct rte_timecounter));
-
-	adapter->systime_tc.cc_mask = YUSUR2_CYCLECOUNTER_MASK;
-	adapter->systime_tc.cc_shift = shift;
-	adapter->systime_tc.nsec_mask = (1ULL << shift) - 1;
-
-	adapter->rx_tstamp_tc.cc_mask = YUSUR2_CYCLECOUNTER_MASK;
-	adapter->rx_tstamp_tc.cc_shift = shift;
-	adapter->rx_tstamp_tc.nsec_mask = (1ULL << shift) - 1;
-
-	adapter->tx_tstamp_tc.cc_mask = YUSUR2_CYCLECOUNTER_MASK;
-	adapter->tx_tstamp_tc.cc_shift = shift;
-	adapter->tx_tstamp_tc.nsec_mask = (1ULL << shift) - 1;
+	//TODO:
 }
 
 static int
@@ -7319,40 +5765,7 @@ yusur2_timesync_read_time(struct rte_eth_dev *dev, struct timespec *ts)
 static int
 yusur2_timesync_enable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t tsync_ctl;
-	uint32_t tsauxc;
-
-	/* Stop the timesync system time. */
-	YUSUR2_WRITE_REG(hw, YUSUR2_TIMINCA, 0x0);
-	/* Reset the timesync system time value. */
-	YUSUR2_WRITE_REG(hw, YUSUR2_SYSTIML, 0x0);
-	YUSUR2_WRITE_REG(hw, YUSUR2_SYSTIMH, 0x0);
-
-	/* Enable system time for platforms where it isn't on by default. */
-	tsauxc = YUSUR2_READ_REG(hw, YUSUR2_TSAUXC);
-	tsauxc &= ~YUSUR2_TSAUXC_DISABLE_SYSTIME;
-	YUSUR2_WRITE_REG(hw, YUSUR2_TSAUXC, tsauxc);
-
-	yusur2_start_timecounters(dev);
-
-	/* Enable L2 filtering of IEEE1588/802.1AS Ethernet frame types. */
-	YUSUR2_WRITE_REG(hw, YUSUR2_ETQF(YUSUR2_ETQF_FILTER_1588),
-			(RTE_ETHER_TYPE_1588 |
-			 YUSUR2_ETQF_FILTER_EN |
-			 YUSUR2_ETQF_1588));
-
-	/* Enable timestamping of received PTP packets. */
-	tsync_ctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCRXCTL);
-	tsync_ctl |= YUSUR2_TSYNCRXCTL_ENABLED;
-	YUSUR2_WRITE_REG(hw, YUSUR2_TSYNCRXCTL, tsync_ctl);
-
-	/* Enable timestamping of transmitted PTP packets. */
-	tsync_ctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCTXCTL);
-	tsync_ctl |= YUSUR2_TSYNCTXCTL_ENABLED;
-	YUSUR2_WRITE_REG(hw, YUSUR2_TSYNCTXCTL, tsync_ctl);
-
-	YUSUR2_WRITE_FLUSH(hw);
+	//TODO:support timesync
 
 	return 0;
 }
@@ -7360,24 +5773,7 @@ yusur2_timesync_enable(struct rte_eth_dev *dev)
 static int
 yusur2_timesync_disable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t tsync_ctl;
-
-	/* Disable timestamping of transmitted PTP packets. */
-	tsync_ctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCTXCTL);
-	tsync_ctl &= ~YUSUR2_TSYNCTXCTL_ENABLED;
-	YUSUR2_WRITE_REG(hw, YUSUR2_TSYNCTXCTL, tsync_ctl);
-
-	/* Disable timestamping of received PTP packets. */
-	tsync_ctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCRXCTL);
-	tsync_ctl &= ~YUSUR2_TSYNCRXCTL_ENABLED;
-	YUSUR2_WRITE_REG(hw, YUSUR2_TSYNCRXCTL, tsync_ctl);
-
-	/* Disable L2 filtering of IEEE1588/802.1AS Ethernet frame types. */
-	YUSUR2_WRITE_REG(hw, YUSUR2_ETQF(YUSUR2_ETQF_FILTER_1588), 0);
-
-	/* Stop incrementating the System Time registers. */
-	YUSUR2_WRITE_REG(hw, YUSUR2_TIMINCA, 0);
+	//TODO:support timesync
 
 	return 0;
 }
@@ -7387,19 +5783,7 @@ yusur2_timesync_read_rx_timestamp(struct rte_eth_dev *dev,
 				 struct timespec *timestamp,
 				 uint32_t flags __rte_unused)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_adapter *adapter = dev->data->dev_private;
-	uint32_t tsync_rxctl;
-	uint64_t rx_tstamp_cycles;
-	uint64_t ns;
-
-	tsync_rxctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCRXCTL);
-	if ((tsync_rxctl & YUSUR2_TSYNCRXCTL_VALID) == 0)
-		return -EINVAL;
-
-	rx_tstamp_cycles = yusur2_read_rx_tstamp_cyclecounter(dev);
-	ns = rte_timecounter_update(&adapter->rx_tstamp_tc, rx_tstamp_cycles);
-	*timestamp = rte_ns_to_timespec(ns);
+	//TODO:
 
 	return  0;
 }
@@ -7408,19 +5792,7 @@ static int
 yusur2_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 				 struct timespec *timestamp)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_adapter *adapter = dev->data->dev_private;
-	uint32_t tsync_txctl;
-	uint64_t tx_tstamp_cycles;
-	uint64_t ns;
-
-	tsync_txctl = YUSUR2_READ_REG(hw, YUSUR2_TSYNCTXCTL);
-	if ((tsync_txctl & YUSUR2_TSYNCTXCTL_VALID) == 0)
-		return -EINVAL;
-
-	tx_tstamp_cycles = yusur2_read_tx_tstamp_cyclecounter(dev);
-	ns = rte_timecounter_update(&adapter->tx_tstamp_tc, tx_tstamp_cycles);
-	*timestamp = rte_ns_to_timespec(ns);
+	//TODO:
 
 	return 0;
 }
@@ -7432,23 +5804,9 @@ yusur2_get_reg_length(struct rte_eth_dev *dev)
 	int count = 0;
 	int g_ind = 0;
 	const struct reg_info *reg_group;
-	const struct reg_info **reg_set = (hw->mac.type == yusur2_mac_82598EB) ?
-				    yusur2_regs_mac_82598EB : yusur2_regs_others;
+	const struct reg_info **reg_set = yusur2_regs_others;
 
 	while ((reg_group = reg_set[g_ind++]))
-		count += yusur2_regs_group_count(reg_group);
-
-	return count;
-}
-
-static int
-yusur2vf_get_reg_length(struct rte_eth_dev *dev __rte_unused)
-{
-	int count = 0;
-	int g_ind = 0;
-	const struct reg_info *reg_group;
-
-	while ((reg_group = yusur2vf_regs[g_ind++]))
 		count += yusur2_regs_group_count(reg_group);
 
 	return count;
@@ -7463,8 +5821,7 @@ yusur2_get_regs(struct rte_eth_dev *dev,
 	int g_ind = 0;
 	int count = 0;
 	const struct reg_info *reg_group;
-	const struct reg_info **reg_set = (hw->mac.type == yusur2_mac_82598EB) ?
-				    yusur2_regs_mac_82598EB : yusur2_regs_others;
+	const struct reg_info **reg_set = yusur2_regs_others;
 
 	if (data == NULL) {
 		regs->length = yusur2_get_reg_length(dev);
@@ -7490,30 +5847,7 @@ static int
 yusur2vf_get_regs(struct rte_eth_dev *dev,
 		struct rte_dev_reg_info *regs)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t *data = regs->data;
-	int g_ind = 0;
-	int count = 0;
-	const struct reg_info *reg_group;
-
-	if (data == NULL) {
-		regs->length = yusur2vf_get_reg_length(dev);
-		regs->width = sizeof(uint32_t);
-		return 0;
-	}
-
-	/* Support only full register dump */
-	if ((regs->length == 0) ||
-	    (regs->length == (uint32_t)yusur2vf_get_reg_length(dev))) {
-		regs->version = hw->mac.type << 24 | hw->revision_id << 16 |
-			hw->device_id;
-		while ((reg_group = yusur2vf_regs[g_ind++]))
-			count += yusur2_read_regs_group(dev, &data[count],
-						      reg_group);
-		return 0;
-	}
-
-	return -ENOTSUP;
+	return 0;
 }
 
 static int
@@ -7639,165 +5973,39 @@ yusur2_get_module_eeprom(struct rte_eth_dev *dev,
 
 uint16_t
 yusur2_reta_size_get(enum yusur2_mac_type mac_type) {
-	switch (mac_type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		return ETH_RSS_RETA_SIZE_512;
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		return ETH_RSS_RETA_SIZE_64;
-	case yusur2_mac_X540_vf:
-	case yusur2_mac_82599_vf:
-		return 0;
-	default:
-		return ETH_RSS_RETA_SIZE_128;
-	}
+	//TODO:
+	return ETH_RSS_RETA_SIZE_128;
 }
 
 uint32_t
 yusur2_reta_reg_get(enum yusur2_mac_type mac_type, uint16_t reta_idx) {
-	switch (mac_type) {
-	case yusur2_mac_X550:
-	case yusur2_mac_X550EM_x:
-	case yusur2_mac_X550EM_a:
-		if (reta_idx < ETH_RSS_RETA_SIZE_128)
-			return YUSUR2_RETA(reta_idx >> 2);
-		else
-			return YUSUR2_ERETA((reta_idx - ETH_RSS_RETA_SIZE_128) >> 2);
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		return YUSUR2_VFRETA(reta_idx >> 2);
-	default:
-		return YUSUR2_RETA(reta_idx >> 2);
-	}
+	//TODO:
+	return YUSUR2_RETA(reta_idx >> 2);
 }
 
 uint32_t
 yusur2_mrqc_reg_get(enum yusur2_mac_type mac_type) {
-	switch (mac_type) {
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		return YUSUR2_VFMRQC;
-	default:
-		return YUSUR2_MRQC;
-	}
+	//TODO:
+	return YUSUR2_MRQC;
 }
 
 uint32_t
 yusur2_rssrk_reg_get(enum yusur2_mac_type mac_type, uint8_t i) {
-	switch (mac_type) {
-	case yusur2_mac_X550_vf:
-	case yusur2_mac_X550EM_x_vf:
-	case yusur2_mac_X550EM_a_vf:
-		return YUSUR2_VFRSSRK(i);
-	default:
-		return YUSUR2_RSSRK(i);
-	}
+	//TODO:
+	return YUSUR2_RSSRK(i);
 }
 
 bool
 yusur2_rss_update_sp(enum yusur2_mac_type mac_type) {
-	switch (mac_type) {
-	case yusur2_mac_82599_vf:
-	case yusur2_mac_X540_vf:
-		return 0;
-	default:
-		return 1;
-	}
+	//TODO:
+	return 1;
 }
 
 static int
 yusur2_dev_get_dcb_info(struct rte_eth_dev *dev,
 			struct rte_eth_dcb_info *dcb_info)
 {
-	struct yusur2_dcb_config *dcb_config =
-			YUSUR2_DEV_PRIVATE_TO_DCB_CFG(dev->data->dev_private);
-	struct yusur2_dcb_tc_config *tc;
-	struct rte_eth_dcb_tc_queue_mapping *tc_queue;
-	uint8_t nb_tcs;
-	uint8_t i, j;
-
-	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_DCB_FLAG)
-		dcb_info->nb_tcs = dcb_config->num_tcs.pg_tcs;
-	else
-		dcb_info->nb_tcs = 1;
-
-	tc_queue = &dcb_info->tc_queue;
-	nb_tcs = dcb_info->nb_tcs;
-
-	if (dcb_config->vt_mode) { /* vt is enabled*/
-		struct rte_eth_vmdq_dcb_conf *vmdq_rx_conf =
-				&dev->data->dev_conf.rx_adv_conf.vmdq_dcb_conf;
-		for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++)
-			dcb_info->prio_tc[i] = vmdq_rx_conf->dcb_tc[i];
-		if (RTE_ETH_DEV_SRIOV(dev).active > 0) {
-			for (j = 0; j < nb_tcs; j++) {
-				tc_queue->tc_rxq[0][j].base = j;
-				tc_queue->tc_rxq[0][j].nb_queue = 1;
-				tc_queue->tc_txq[0][j].base = j;
-				tc_queue->tc_txq[0][j].nb_queue = 1;
-			}
-		} else {
-			for (i = 0; i < vmdq_rx_conf->nb_queue_pools; i++) {
-				for (j = 0; j < nb_tcs; j++) {
-					tc_queue->tc_rxq[i][j].base =
-						i * nb_tcs + j;
-					tc_queue->tc_rxq[i][j].nb_queue = 1;
-					tc_queue->tc_txq[i][j].base =
-						i * nb_tcs + j;
-					tc_queue->tc_txq[i][j].nb_queue = 1;
-				}
-			}
-		}
-	} else { /* vt is disabled*/
-		struct rte_eth_dcb_rx_conf *rx_conf =
-				&dev->data->dev_conf.rx_adv_conf.dcb_rx_conf;
-		for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++)
-			dcb_info->prio_tc[i] = rx_conf->dcb_tc[i];
-		if (dcb_info->nb_tcs == ETH_4_TCS) {
-			for (i = 0; i < dcb_info->nb_tcs; i++) {
-				dcb_info->tc_queue.tc_rxq[0][i].base = i * 32;
-				dcb_info->tc_queue.tc_rxq[0][i].nb_queue = 16;
-			}
-			dcb_info->tc_queue.tc_txq[0][0].base = 0;
-			dcb_info->tc_queue.tc_txq[0][1].base = 64;
-			dcb_info->tc_queue.tc_txq[0][2].base = 96;
-			dcb_info->tc_queue.tc_txq[0][3].base = 112;
-			dcb_info->tc_queue.tc_txq[0][0].nb_queue = 64;
-			dcb_info->tc_queue.tc_txq[0][1].nb_queue = 32;
-			dcb_info->tc_queue.tc_txq[0][2].nb_queue = 16;
-			dcb_info->tc_queue.tc_txq[0][3].nb_queue = 16;
-		} else if (dcb_info->nb_tcs == ETH_8_TCS) {
-			for (i = 0; i < dcb_info->nb_tcs; i++) {
-				dcb_info->tc_queue.tc_rxq[0][i].base = i * 16;
-				dcb_info->tc_queue.tc_rxq[0][i].nb_queue = 16;
-			}
-			dcb_info->tc_queue.tc_txq[0][0].base = 0;
-			dcb_info->tc_queue.tc_txq[0][1].base = 32;
-			dcb_info->tc_queue.tc_txq[0][2].base = 64;
-			dcb_info->tc_queue.tc_txq[0][3].base = 80;
-			dcb_info->tc_queue.tc_txq[0][4].base = 96;
-			dcb_info->tc_queue.tc_txq[0][5].base = 104;
-			dcb_info->tc_queue.tc_txq[0][6].base = 112;
-			dcb_info->tc_queue.tc_txq[0][7].base = 120;
-			dcb_info->tc_queue.tc_txq[0][0].nb_queue = 32;
-			dcb_info->tc_queue.tc_txq[0][1].nb_queue = 32;
-			dcb_info->tc_queue.tc_txq[0][2].nb_queue = 16;
-			dcb_info->tc_queue.tc_txq[0][3].nb_queue = 16;
-			dcb_info->tc_queue.tc_txq[0][4].nb_queue = 8;
-			dcb_info->tc_queue.tc_txq[0][5].nb_queue = 8;
-			dcb_info->tc_queue.tc_txq[0][6].nb_queue = 8;
-			dcb_info->tc_queue.tc_txq[0][7].nb_queue = 8;
-		}
-	}
-	for (i = 0; i < dcb_info->nb_tcs; i++) {
-		tc = &dcb_config->tc_config[i];
-		dcb_info->tc_bws[i] = tc->path[YUSUR2_DCB_TX_CONFIG].bwg_percent;
-	}
+	//TODO:
 	return 0;
 }
 
@@ -7806,6 +6014,8 @@ static int
 yusur2_update_e_tag_eth_type(struct yusur2_hw *hw,
 			    uint16_t ether_type)
 {
+	//TODO:
+#if 0
 	uint32_t etag_etype;
 
 	if (hw->mac.type != yusur2_mac_X550 &&
@@ -7819,7 +6029,7 @@ yusur2_update_e_tag_eth_type(struct yusur2_hw *hw,
 	etag_etype |= ether_type;
 	YUSUR2_WRITE_REG(hw, YUSUR2_ETAG_ETYPE, etag_etype);
 	YUSUR2_WRITE_FLUSH(hw);
-
+#endif
 	return 0;
 }
 
@@ -7854,6 +6064,8 @@ yusur2_dev_l2_tunnel_eth_type_conf(struct rte_eth_dev *dev,
 static int
 yusur2_e_tag_enable(struct yusur2_hw *hw)
 {
+	//TODO:
+#if 0
 	uint32_t etag_etype;
 
 	if (hw->mac.type != yusur2_mac_X550 &&
@@ -7866,7 +6078,7 @@ yusur2_e_tag_enable(struct yusur2_hw *hw)
 	etag_etype |= YUSUR2_ETAG_ETYPE_VALID;
 	YUSUR2_WRITE_REG(hw, YUSUR2_ETAG_ETYPE, etag_etype);
 	YUSUR2_WRITE_FLUSH(hw);
-
+#endif
 	return 0;
 }
 
@@ -7898,6 +6110,8 @@ yusur2_dev_l2_tunnel_enable(struct rte_eth_dev *dev,
 static int
 yusur2_e_tag_disable(struct yusur2_hw *hw)
 {
+	//TODO:
+#if 0
 	uint32_t etag_etype;
 
 	if (hw->mac.type != yusur2_mac_X550 &&
@@ -7910,7 +6124,7 @@ yusur2_e_tag_disable(struct yusur2_hw *hw)
 	etag_etype &= ~YUSUR2_ETAG_ETYPE_VALID;
 	YUSUR2_WRITE_REG(hw, YUSUR2_ETAG_ETYPE, etag_etype);
 	YUSUR2_WRITE_FLUSH(hw);
-
+#endif
 	return 0;
 }
 
@@ -7943,6 +6157,8 @@ yusur2_e_tag_filter_del(struct rte_eth_dev *dev,
 		       struct rte_eth_l2_tunnel_conf *l2_tunnel)
 {
 	int ret = 0;
+//TODO:
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t i, rar_entries;
 	uint32_t rar_low, rar_high;
@@ -7970,7 +6186,7 @@ yusur2_e_tag_filter_del(struct rte_eth_dev *dev,
 			return ret;
 		}
 	}
-
+#endif
 	return ret;
 }
 
@@ -7978,7 +6194,10 @@ static int
 yusur2_e_tag_filter_add(struct rte_eth_dev *dev,
 		       struct rte_eth_l2_tunnel_conf *l2_tunnel)
 {
+//TODO:
 	int ret = 0;
+	return ret;
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t i, rar_entries;
 	uint32_t rar_low, rar_high;
@@ -8013,6 +6232,7 @@ yusur2_e_tag_filter_add(struct rte_eth_dev *dev,
 	PMD_INIT_LOG(NOTICE, "The table of E-tag forwarding rule is full."
 		     " Please remove a rule before adding a new one.");
 	return -EINVAL;
+#endif
 }
 
 static inline struct yusur2_l2_tn_filter *
@@ -8209,6 +6429,8 @@ static int
 yusur2_e_tag_forwarding_en_dis(struct rte_eth_dev *dev, bool en)
 {
 	int ret = 0;
+//TODO:
+#if 0
 	uint32_t ctrl;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -8223,7 +6445,7 @@ yusur2_e_tag_forwarding_en_dis(struct rte_eth_dev *dev, bool en)
 	if (en)
 		ctrl |= YUSUR2_VT_CTL_POOLING_MODE_ETAG;
 	YUSUR2_WRITE_REG(hw, YUSUR2_VT_CTL, ctrl);
-
+#endif
 	return ret;
 }
 
@@ -8280,8 +6502,10 @@ yusur2_e_tag_insertion_en_dis(struct rte_eth_dev *dev,
 			     struct rte_eth_l2_tunnel_conf *l2_tunnel,
 			     bool en)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	int ret = 0;
+//TODO:
+#if 0
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	uint32_t vmtir, vmvir;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -8311,7 +6535,7 @@ yusur2_e_tag_insertion_en_dis(struct rte_eth_dev *dev,
 	if (en)
 		vmvir |= YUSUR2_VMVIR_TAGA_ETAG_INSERT;
 	YUSUR2_WRITE_REG(hw, YUSUR2_VMVIR(l2_tunnel->vf_id), vmvir);
-
+#endif
 	return ret;
 }
 
@@ -8361,6 +6585,8 @@ yusur2_e_tag_stripping_en_dis(struct rte_eth_dev *dev,
 			     bool en)
 {
 	int ret = 0;
+//TODO:
+#if 0
 	uint32_t qde;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -8378,7 +6604,7 @@ yusur2_e_tag_stripping_en_dis(struct rte_eth_dev *dev,
 	qde &= ~YUSUR2_QDE_READ;
 	qde |= YUSUR2_QDE_WRITE;
 	YUSUR2_WRITE_REG(hw, YUSUR2_QDE, qde);
-
+#endif
 	return ret;
 }
 
@@ -8536,6 +6762,8 @@ yusur2_dev_udp_tunnel_port_add(struct rte_eth_dev *dev,
 			      struct rte_eth_udp_tunnel *udp_tunnel)
 {
 	int ret = 0;
+//TODO:
+#if 0
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
 	if (hw->mac.type != yusur2_mac_X550 &&
@@ -8563,7 +6791,7 @@ yusur2_dev_udp_tunnel_port_add(struct rte_eth_dev *dev,
 		ret = -EINVAL;
 		break;
 	}
-
+#endif
 	return ret;
 }
 
@@ -8574,12 +6802,6 @@ yusur2_dev_udp_tunnel_port_del(struct rte_eth_dev *dev,
 {
 	int ret = 0;
 	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	if (hw->mac.type != yusur2_mac_X550 &&
-	    hw->mac.type != yusur2_mac_X550EM_x &&
-	    hw->mac.type != yusur2_mac_X550EM_a) {
-		return -ENOTSUP;
-	}
 
 	if (udp_tunnel == NULL)
 		return -EINVAL;
@@ -8605,150 +6827,31 @@ yusur2_dev_udp_tunnel_port_del(struct rte_eth_dev *dev,
 static int
 yusur2vf_dev_promiscuous_enable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int ret;
-
-	switch (hw->mac.ops.update_xcast_mode(hw, YUSUR2VF_XCAST_MODE_PROMISC)) {
-	case YUSUR2_SUCCESS:
-		ret = 0;
-		break;
-	case YUSUR2_ERR_FEATURE_NOT_SUPPORTED:
-		ret = -ENOTSUP;
-		break;
-	default:
-		ret = -EAGAIN;
-		break;
-	}
-
-	return ret;
+	return 0;
 }
 
 static int
 yusur2vf_dev_promiscuous_disable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int ret;
-
-	switch (hw->mac.ops.update_xcast_mode(hw, YUSUR2VF_XCAST_MODE_NONE)) {
-	case YUSUR2_SUCCESS:
-		ret = 0;
-		break;
-	case YUSUR2_ERR_FEATURE_NOT_SUPPORTED:
-		ret = -ENOTSUP;
-		break;
-	default:
-		ret = -EAGAIN;
-		break;
-	}
-
-	return ret;
+	return 0;
 }
 
 static int
 yusur2vf_dev_allmulticast_enable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int ret;
-	int mode = YUSUR2VF_XCAST_MODE_ALLMULTI;
-
-	switch (hw->mac.ops.update_xcast_mode(hw, mode)) {
-	case YUSUR2_SUCCESS:
-		ret = 0;
-		break;
-	case YUSUR2_ERR_FEATURE_NOT_SUPPORTED:
-		ret = -ENOTSUP;
-		break;
-	default:
-		ret = -EAGAIN;
-		break;
-	}
-
-	return ret;
+	return 0;
 }
 
 static int
 yusur2vf_dev_allmulticast_disable(struct rte_eth_dev *dev)
 {
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	int ret;
-
-	switch (hw->mac.ops.update_xcast_mode(hw, YUSUR2VF_XCAST_MODE_MULTI)) {
-	case YUSUR2_SUCCESS:
-		ret = 0;
-		break;
-	case YUSUR2_ERR_FEATURE_NOT_SUPPORTED:
-		ret = -ENOTSUP;
-		break;
-	default:
-		ret = -EAGAIN;
-		break;
-	}
-
-	return ret;
-}
-
-static void yusur2vf_mbx_process(struct rte_eth_dev *dev)
-{
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	u32 in_msg = 0;
-
-	/* peek the message first */
-	in_msg = YUSUR2_READ_REG(hw, YUSUR2_VFMBMEM);
-
-	/* PF reset VF event */
-	if (in_msg == YUSUR2_PF_CONTROL_MSG) {
-		/* dummy mbx read to ack pf */
-		if (yusur2_read_mbx(hw, &in_msg, 1, 0))
-			return;
-		_rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_RESET,
-					      NULL);
-	}
-}
-
-static int
-yusur2vf_dev_interrupt_get_status(struct rte_eth_dev *dev)
-{
-	uint32_t eicr;
-	struct yusur2_hw *hw = YUSUR2_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	yusur2vf_intr_disable(dev);
-
-	/* read-on-clear nic registers here */
-	eicr = YUSUR2_READ_REG(hw, YUSUR2_VTEICR);
-	intr->flags = 0;
-
-	/* only one misc vector supported - mailbox */
-	eicr &= YUSUR2_VTEICR_MASK;
-	if (eicr == YUSUR2_MISC_VEC_ID)
-		intr->flags |= YUSUR2_FLAG_MAILBOX;
-
-	return 0;
-}
-
-static int
-yusur2vf_dev_interrupt_action(struct rte_eth_dev *dev)
-{
-	struct yusur2_interrupt *intr =
-		YUSUR2_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-
-	if (intr->flags & YUSUR2_FLAG_MAILBOX) {
-		yusur2vf_mbx_process(dev);
-		intr->flags &= ~YUSUR2_FLAG_MAILBOX;
-	}
-
-	yusur2vf_intr_enable(dev);
-
 	return 0;
 }
 
 static void
 yusur2vf_dev_interrupt_handler(void *param)
 {
-	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
-
-	yusur2vf_dev_interrupt_get_status(dev);
-	yusur2vf_dev_interrupt_action(dev);
+	//TODO:
 }
 
 /**
@@ -8887,7 +6990,6 @@ yusur2_filter_restore(struct rte_eth_dev *dev)
 	yusur2_ntuple_filter_restore(dev);
 	yusur2_ethertype_filter_restore(dev);
 	yusur2_syn_filter_restore(dev);
-	yusur2_fdir_filter_restore(dev);
 	yusur2_l2_tn_filter_restore(dev);
 	yusur2_rss_filter_restore(dev);
 
