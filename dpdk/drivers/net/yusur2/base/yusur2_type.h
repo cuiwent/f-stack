@@ -49,11 +49,11 @@
 
 /* Vendor ID */
 //TODO: check vendor id...
-#define YUSUR2_YUSUR_VENDOR_ID			0x8086
+#define YUSUR2_YUSUR_VENDOR_ID			0x10ee
 
 //TODO:check device id...
 /* Device IDs */
-#define YUSUR2_DEV_ID_SN2100			0x10B6
+#define YUSUR2_DEV_ID_SN2100			0x8038
 
 #define YUSUR2_CAT(r, m) YUSUR2_##r##m
 

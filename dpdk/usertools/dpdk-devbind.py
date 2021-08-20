@@ -10,9 +10,12 @@ import getopt
 import subprocess
 from os.path import exists, abspath, dirname, basename
 
+#TODO: check yusur class id, it should 02 for network type device
 # The PCI base class for all devices
-network_class = {'Class': '02', 'Vendor': None, 'Device': None,
+network_class = {'Class': '07', 'Vendor': None, 'Device': None,
                     'SVendor': None, 'SDevice': None}
+#network_class = {'Class': '02', 'Vendor': None, 'Device': None,
+#                    'SVendor': None, 'SDevice': None}
 acceleration_class = {'Class': '12', 'Vendor': None, 'Device': None,
                       'SVendor': None, 'SDevice': None}
 ifpga_class = {'Class': '12', 'Vendor': '8086', 'Device': '0b30',

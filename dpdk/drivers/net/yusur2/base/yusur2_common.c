@@ -2238,6 +2238,9 @@ s32 yusur2_calc_eeprom_checksum_generic(struct yusur2_hw *hw)
 s32 yusur2_validate_eeprom_checksum_generic(struct yusur2_hw *hw,
 					   u16 *checksum_val)
 {
+	s32 status = YUSUR2_SUCCESS;
+//TODO:
+#if 0
 	s32 status;
 	u16 checksum;
 	u16 read_checksum = 0;
@@ -2275,7 +2278,7 @@ s32 yusur2_validate_eeprom_checksum_generic(struct yusur2_hw *hw,
 	/* If the user cares, return the calculated checksum */
 	if (checksum_val)
 		*checksum_val = checksum;
-
+#endif
 	return status;
 }
 

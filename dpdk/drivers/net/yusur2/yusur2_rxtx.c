@@ -4164,6 +4164,9 @@ yusur2_dev_rxtx_start(struct rte_eth_dev *dev)
 int __attribute__((cold))
 yusur2_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 {
+//TODO: support...
+	PMD_INIT_FUNC_TRACE();
+#if 0
 	struct yusur2_hw     *hw;
 	struct yusur2_rx_queue *rxq;
 	uint32_t rxdctl;
@@ -4196,7 +4199,7 @@ yusur2_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	YUSUR2_WRITE_REG(hw, YUSUR2_RDH(rxq->reg_idx), 0);
 	YUSUR2_WRITE_REG(hw, YUSUR2_RDT(rxq->reg_idx), rxq->nb_rx_desc - 1);
 	dev->data->rx_queue_state[rx_queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
-
+#endif
 	return 0;
 }
 
@@ -4206,6 +4209,9 @@ yusur2_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 int __attribute__((cold))
 yusur2_dev_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 {
+//TODO: support...
+	PMD_INIT_FUNC_TRACE();
+#if 0
 	struct yusur2_hw     *hw;
 	struct yusur2_adapter *adapter = dev->data->dev_private;
 	struct yusur2_rx_queue *rxq;
@@ -4235,7 +4241,7 @@ yusur2_dev_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	yusur2_rx_queue_release_mbufs(rxq);
 	yusur2_reset_rx_queue(adapter, rxq);
 	dev->data->rx_queue_state[rx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
-
+#endif
 	return 0;
 }
 
